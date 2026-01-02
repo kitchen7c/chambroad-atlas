@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { LLMConfig, LLMProvider } from '../../types';
 import { LLM_PROVIDER_PRESETS } from '../../types';
 
@@ -13,6 +13,7 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
   const [isCustom, setIsCustom] = useState(config?.provider === 'custom');
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testError, setTestError] = useState<string>('');
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const defaultConfig: LLMConfig = {
     provider: 'google',
@@ -22,6 +23,18 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
   };
 
   const currentConfig = config || defaultConfig;
+
+  // Sync isCustom state with config
+  useEffect(() => {
+    setIsCustom(config?.provider === 'custom');
+  }, [config?.provider]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const handleProviderChange = (provider: LLMProvider) => {
     if (provider === 'custom') {
@@ -61,7 +74,8 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
       setTestError(e instanceof Error ? e.message : 'Unknown error');
     }
 
-    setTimeout(() => setTestStatus('idle'), 3000);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setTestStatus('idle'), 3000);
   };
 
   const availableModels = isCustom
@@ -73,8 +87,9 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
       <h3>🤖 LLM Configuration</h3>
 
       <div className="setting-group">
-        <label>Provider</label>
+        <label htmlFor="llm-provider">Provider</label>
         <select
+          id="llm-provider"
           value={currentConfig.provider}
           onChange={(e) => handleProviderChange(e.target.value as LLMProvider)}
         >
@@ -87,8 +102,9 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
       </div>
 
       <div className="setting-group">
-        <label>Base URL</label>
+        <label htmlFor="llm-baseurl">Base URL</label>
         <input
+          id="llm-baseurl"
           type="text"
           value={currentConfig.baseUrl}
           onChange={(e) => onChange({ ...currentConfig, baseUrl: e.target.value })}
@@ -101,9 +117,10 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
       </div>
 
       <div className="setting-group">
-        <label>API Key</label>
+        <label htmlFor="llm-apikey">API Key</label>
         <div className="api-key-input-wrapper">
           <input
+            id="llm-apikey"
             type={showApiKey ? 'text' : 'password'}
             value={currentConfig.apiKey}
             onChange={(e) => onChange({ ...currentConfig, apiKey: e.target.value })}
@@ -113,6 +130,7 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
             type="button"
             className="toggle-visibility"
             onClick={() => setShowApiKey(!showApiKey)}
+            aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
           >
             {showApiKey ? '👁️' : '👁️‍🗨️'}
           </button>
@@ -120,9 +138,10 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
       </div>
 
       <div className="setting-group">
-        <label>Model</label>
+        <label htmlFor="llm-model">Model</label>
         {isCustom ? (
           <input
+            id="llm-model"
             type="text"
             value={currentConfig.model}
             onChange={(e) => onChange({ ...currentConfig, model: e.target.value })}
@@ -130,6 +149,7 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
           />
         ) : (
           <select
+            id="llm-model"
             value={currentConfig.model}
             onChange={(e) => onChange({ ...currentConfig, model: e.target.value })}
           >
@@ -143,41 +163,59 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
       <details className="advanced-options">
         <summary>Advanced Options</summary>
         <div className="setting-group">
-          <label>Temperature</label>
+          <label htmlFor="llm-temperature">Temperature</label>
           <input
+            id="llm-temperature"
             type="number"
             min="0"
             max="2"
             step="0.1"
             value={currentConfig.options?.temperature ?? 0.7}
-            onChange={(e) => onChange({
-              ...currentConfig,
-              options: { ...currentConfig.options, temperature: parseFloat(e.target.value) }
-            })}
+            onChange={(e) => {
+              const temp = parseFloat(e.target.value);
+              if (!isNaN(temp)) {
+                onChange({
+                  ...currentConfig,
+                  options: { ...currentConfig.options, temperature: temp }
+                });
+              }
+            }}
           />
         </div>
         <div className="setting-group">
-          <label>Max Tokens</label>
+          <label htmlFor="llm-max-tokens">Max Tokens</label>
           <input
+            id="llm-max-tokens"
             type="number"
             min="1"
             value={currentConfig.options?.maxTokens ?? 4096}
-            onChange={(e) => onChange({
-              ...currentConfig,
-              options: { ...currentConfig.options, maxTokens: parseInt(e.target.value) }
-            })}
+            onChange={(e) => {
+              const value = parseInt(e.target.value, 10);
+              if (!isNaN(value) && value > 0) {
+                onChange({
+                  ...currentConfig,
+                  options: { ...currentConfig.options, maxTokens: value }
+                });
+              }
+            }}
           />
         </div>
         <div className="setting-group">
-          <label>Timeout (seconds)</label>
+          <label htmlFor="llm-timeout">Timeout (seconds)</label>
           <input
+            id="llm-timeout"
             type="number"
             min="1"
             value={currentConfig.options?.timeout ?? 60}
-            onChange={(e) => onChange({
-              ...currentConfig,
-              options: { ...currentConfig.options, timeout: parseInt(e.target.value) }
-            })}
+            onChange={(e) => {
+              const value = parseInt(e.target.value, 10);
+              if (!isNaN(value) && value > 0) {
+                onChange({
+                  ...currentConfig,
+                  options: { ...currentConfig.options, timeout: value }
+                });
+              }
+            }}
           />
         </div>
       </details>
