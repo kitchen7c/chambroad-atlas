@@ -1,42 +1,97 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { Settings } from './types';
-
-const PROVIDER_MODELS = {
-  google: [
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: '1M token context' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Fast and efficient' },
-    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Optimized for speed' },
-  ],
-};
+import type { Settings, LLMConfig } from './types';
+import { LLM_PROVIDER_PRESETS } from './types';
+import { LLMSettings } from './src/components/LLMSettings';
 
 function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({
-    provider: 'google',
-    apiKey: '',
-    model: 'gemini-2.5-pro',
+    llm: {
+      provider: 'google',
+      baseUrl: LLM_PROVIDER_PRESETS.google.baseUrl,
+      apiKey: '',
+      model: LLM_PROVIDER_PRESETS.google.defaultModel,
+    },
     toolMode: 'tool-router',
     composioApiKey: '',
   });
   const [saved, setSaved] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
   const [showComposioKey, setShowComposioKey] = useState(false);
 
   useEffect(() => {
-    // Load settings from chrome.storage
     chrome.storage.local.get(['atlasSettings'], (result) => {
       if (result.atlasSettings) {
-        setSettings(result.atlasSettings);
+        const oldSettings = result.atlasSettings;
+        // Migrate from old format if needed
+        if (!oldSettings.llm && oldSettings.apiKey) {
+          setSettings({
+            llm: {
+              provider: 'google',
+              baseUrl: LLM_PROVIDER_PRESETS.google.baseUrl,
+              apiKey: oldSettings.apiKey,
+              model: oldSettings.model || LLM_PROVIDER_PRESETS.google.defaultModel,
+            },
+            toolMode: oldSettings.toolMode,
+            composioApiKey: oldSettings.composioApiKey,
+          });
+        } else if (oldSettings.llm) {
+          setSettings(oldSettings);
+        }
       }
     });
   }, []);
 
+  const handleLLMChange = (llmConfig: LLMConfig) => {
+    setSettings({ ...settings, llm: llmConfig });
+  };
+
+  const handleTestConnection = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { provider, baseUrl, apiKey, model } = settings.llm;
+
+      if (provider === 'google') {
+        const response = await fetch(
+          `${baseUrl}/models/${model}?key=${apiKey}`,
+          { method: 'GET' }
+        );
+        if (!response.ok) {
+          const error = await response.json();
+          return { success: false, error: error.error?.message || 'Connection failed' };
+        }
+        return { success: true };
+      }
+
+      // OpenAI-compatible APIs
+      const response = await fetch(`${baseUrl}/models`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return { success: false, error: `HTTP ${response.status}` };
+      }
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Network error' };
+    }
+  };
+
   const handleSave = () => {
-    chrome.storage.local.set({ atlasSettings: settings }, () => {
+    // Save with backward compatibility fields
+    const saveData = {
+      ...settings,
+      provider: 'google' as const,
+      apiKey: settings.llm.apiKey,
+      model: settings.llm.model,
+    };
+
+    chrome.storage.local.set({ atlasSettings: saveData }, () => {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
 
-      // Send message to sidebar to refresh
       chrome.runtime.sendMessage({ type: 'SETTINGS_UPDATED' }, () => {
         if (chrome.runtime.lastError) {
           console.log('Sidebar not active, but settings saved');
@@ -53,32 +108,17 @@ function SettingsPage() {
       </div>
 
       <div className="settings-content">
-        <div className="setting-group">
-          <label>AI Provider</label>
-          <div className="provider-info">
-            <p>Google Gemini</p>
-          </div>
-        </div>
+        <LLMSettings
+          config={settings.llm}
+          onChange={handleLLMChange}
+          onTestConnection={handleTestConnection}
+        />
 
         <div className="setting-group">
-          <label>Model</label>
-          <select
-            value={settings.model}
-            onChange={(e) => setSettings({ ...settings, model: e.target.value })}
-            className="model-select"
-          >
-            {PROVIDER_MODELS[settings.provider].map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name} - {model.description}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="setting-group">
-          <label>Composio API Key</label>
+          <label htmlFor="composio-key">Composio API Key</label>
           <div className="api-key-input-wrapper">
             <input
+              id="composio-key"
               type={showComposioKey ? 'text' : 'password'}
               value={settings.composioApiKey || ''}
               onChange={(e) => setSettings({ ...settings, composioApiKey: e.target.value })}
@@ -89,68 +129,27 @@ function SettingsPage() {
               type="button"
               className="toggle-visibility"
               onClick={() => setShowComposioKey(!showComposioKey)}
+              aria-label={showComposioKey ? 'Hide Composio key' : 'Show Composio key'}
             >
               {showComposioKey ? '👁️' : '👁️‍🗨️'}
             </button>
           </div>
           <p className="help-text">
-            Enable Composio Tool Router for access to 500+ app integrations. Get your key from{' '}
-            <a href="https://app.composio.dev/settings" target="_blank" rel="noopener noreferrer">
-              Composio Dashboard
-            </a>
-          </p>
-        </div>
-
-        <div className="setting-group">
-          <label>Google API Key</label>
-          <div className="api-key-input-wrapper">
-            <input
-              type={showApiKey ? 'text' : 'password'}
-              value={settings.apiKey}
-              onChange={(e) => setSettings({ ...settings, apiKey: e.target.value })}
-              placeholder="Enter your Google API key"
-              className="api-key-input"
-            />
-            <button
-              type="button"
-              className="toggle-visibility"
-              onClick={() => setShowApiKey(!showApiKey)}
-            >
-              {showApiKey ? '👁️' : '👁️‍🗨️'}
-            </button>
-          </div>
-          <p className="help-text">
-            Get your API key from:{' '}
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
-              Google AI Studio
-            </a>
+            Enable Composio Tool Router for access to 500+ app integrations.
           </p>
         </div>
 
         <button
           className={`save-button ${saved ? 'saved' : ''}`}
           onClick={handleSave}
-          disabled={!settings.apiKey}
+          disabled={!settings.llm.apiKey}
         >
           {saved ? '✓ Saved!' : 'Save Settings'}
         </button>
 
-        <div className="feature-cards">
-          <div className="feature-card">
-            <div className="feature-icon">◉</div>
-            <h3>Browser Tools</h3>
-            <p>Click the Browser Tools button (◉) to enable Gemini 2.5 Computer Use for direct browser automation with screenshots</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🔧</div>
-            <h3>Tool Router</h3>
-            <p>Add Composio API key to access 500+ integrations (Gmail, Slack, GitHub, etc.) via AI SDK</p>
-          </div>
-        </div>
-
         <div className="info-box">
           <h3>🔒 Privacy & Security</h3>
-          <p>Your API keys are stored locally in your browser and only sent to the respective AI providers. Never shared with third parties.</p>
+          <p>Your API keys are stored locally in your browser and only sent to the respective AI providers.</p>
         </div>
       </div>
     </div>
