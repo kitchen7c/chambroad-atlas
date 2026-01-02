@@ -183,7 +183,26 @@ function ChatSidebar() {
   const loadSettings = async () => {
     chrome.storage.local.get(['atlasSettings'], async (result) => {
       if (result.atlasSettings) {
-        setSettings(result.atlasSettings);
+        const oldSettings = result.atlasSettings;
+        // Migrate from old format if needed
+        if (!oldSettings.llm && oldSettings.apiKey) {
+          const migratedSettings = {
+            llm: {
+              provider: 'google' as const,
+              baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+              apiKey: oldSettings.apiKey,
+              model: oldSettings.model || 'gemini-2.0-flash-exp',
+            },
+            provider: 'google' as const,
+            apiKey: oldSettings.apiKey,
+            model: oldSettings.model,
+          };
+          setSettings(migratedSettings);
+          // Save migrated settings
+          chrome.storage.local.set({ atlasSettings: migratedSettings });
+        } else {
+          setSettings(oldSettings);
+        }
       } else {
         setShowSettings(true);
       }
