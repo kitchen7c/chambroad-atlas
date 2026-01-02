@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
+import { useTranslation } from 'react-i18next';
+import { initI18n } from './src/i18n';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Settings, MCPClient, Message } from './types';
@@ -69,6 +71,7 @@ const MessageParser = ({ content }: { content: string }) => {
 };
 
 function ChatSidebar() {
+  const { t } = useTranslation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -1366,14 +1369,14 @@ GUIDELINES:
     return (
       <div className="chat-container">
         <div className="welcome-message" style={{ padding: '40px 20px' }}>
-          <h2>Welcome to Atlas</h2>
-          <p style={{ marginBottom: '20px' }}>Please configure your AI provider to get started.</p>
+          <h2>{t('app.title')}</h2>
+          <p style={{ marginBottom: '20px' }}>{t('settings.subtitle')}</p>
           <button
             onClick={openSettings}
             className="settings-icon-btn"
             style={{ width: 'auto', padding: '12px 24px' }}
           >
-            Open Settings
+            {t('app.settings')}
           </button>
         </div>
       </div>
@@ -1436,8 +1439,8 @@ GUIDELINES:
       <div className="messages-container" ref={messagesContainerRef}>
         {messages.length === 0 ? (
           <div className="welcome-message">
-            <h2>How can I help you today?</h2>
-            <p>I'm Atlas, your AI assistant. I can help you browse the web, analyze content, and perform various tasks.</p>
+            <h2>{t('chat.welcome')}</h2>
+            <p>{t('chat.welcomeDesc')}</p>
           </div>
         ) : (
           messages.map((message) => (
@@ -1472,7 +1475,7 @@ GUIDELINES:
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Message Atlas..."
+          placeholder={t('chat.placeholder')}
           disabled={isLoading}
           className="chat-input"
         />
@@ -1499,6 +1502,9 @@ GUIDELINES:
   );
 }
 
-const container = document.getElementById('root');
-const root = createRoot(container!);
-root.render(<ChatSidebar />);
+// Initialize i18n before rendering
+initI18n().then(() => {
+  const container = document.getElementById('root');
+  const root = createRoot(container!);
+  root.render(<ChatSidebar />);
+});

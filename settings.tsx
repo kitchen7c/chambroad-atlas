@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import { useTranslation } from 'react-i18next';
+import { initI18n } from './src/i18n';
 import type { Settings, LLMConfig } from './types';
 import { LLM_PROVIDER_PRESETS } from './types';
 import { LLMSettings } from './src/components/LLMSettings';
+import { LanguageSwitch } from './src/components/LanguageSwitch';
 
 function SettingsPage() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<Settings>({
     llm: {
       provider: 'google',
@@ -103,8 +107,8 @@ function SettingsPage() {
   return (
     <div className="settings-container">
       <div className="settings-header">
-        <h1>Settings</h1>
-        <p>Configure your AI provider and preferences</p>
+        <h1>{t('settings.title')}</h1>
+        <p>{t('settings.subtitle')}</p>
       </div>
 
       <div className="settings-content">
@@ -115,14 +119,14 @@ function SettingsPage() {
         />
 
         <div className="setting-group">
-          <label htmlFor="composio-key">Composio API Key</label>
+          <label htmlFor="composio-key">{t('settings.composio.title')}</label>
           <div className="api-key-input-wrapper">
             <input
               id="composio-key"
               type={showComposioKey ? 'text' : 'password'}
               value={settings.composioApiKey || ''}
               onChange={(e) => setSettings({ ...settings, composioApiKey: e.target.value })}
-              placeholder="Enter your Composio API key (optional)"
+              placeholder={t('settings.composio.placeholder')}
               className="api-key-input"
             />
             <button
@@ -135,27 +139,32 @@ function SettingsPage() {
             </button>
           </div>
           <p className="help-text">
-            Enable Composio Tool Router for access to 500+ app integrations.
+            {t('settings.composio.help')}
           </p>
         </div>
+
+        <LanguageSwitch />
 
         <button
           className={`save-button ${saved ? 'saved' : ''}`}
           onClick={handleSave}
           disabled={!settings.llm.apiKey}
         >
-          {saved ? '✓ Saved!' : 'Save Settings'}
+          {saved ? t('settings.saved') : t('settings.save')}
         </button>
 
         <div className="info-box">
-          <h3>🔒 Privacy & Security</h3>
-          <p>Your API keys are stored locally in your browser and only sent to the respective AI providers.</p>
+          <h3>🔒 {t('settings.privacy.title')}</h3>
+          <p>{t('settings.privacy.desc')}</p>
         </div>
       </div>
     </div>
   );
 }
 
-const container = document.getElementById('root');
-const root = createRoot(container!);
-root.render(<SettingsPage />);
+// Initialize i18n before rendering
+initI18n().then(() => {
+  const container = document.getElementById('root');
+  const root = createRoot(container!);
+  root.render(<SettingsPage />);
+});
