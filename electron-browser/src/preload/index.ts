@@ -3,6 +3,9 @@ import { contextBridge, ipcRenderer } from 'electron';
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Locale detection for i18n
+  getLocale: () => navigator.language,
+
   // Settings
   getSetting: (key: string) => ipcRenderer.invoke('get-setting', key),
   setSetting: (key: string, value: any) => ipcRenderer.invoke('set-setting', key, value),
@@ -150,6 +153,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 // Type definitions for TypeScript
 export interface ElectronAPI {
+  getLocale: () => string;
   getSetting: (key: string) => Promise<any>;
   setSetting: (key: string, value: any) => Promise<{ success: boolean }>;
   getAllSettings: () => Promise<Record<string, any>>;
