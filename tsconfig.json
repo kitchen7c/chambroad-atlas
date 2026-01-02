@@ -24,5 +24,6 @@
     "types": ["chrome", "vite/client"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["vite.config.ts", "vitest.config.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
