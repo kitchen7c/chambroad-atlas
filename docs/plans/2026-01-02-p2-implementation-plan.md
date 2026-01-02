@@ -1736,8 +1736,1194 @@ git commit -m "fix: resolve any remaining issues"
 
 ---
 
+---
+
+## Task 13: 创建标签页导航组件
+
+**Files:**
+- Create: `src/components/TabNav.tsx`
+- Create: `src/components/TabNav.css`
+
+**Step 1: 创建组件目录**
+
+Run: `mkdir -p src/components`
+
+**Step 2: 实现 TabNav 组件**
+
+创建 `src/components/TabNav.tsx`：
+
+```typescript
+import React from 'react';
+import './TabNav.css';
+
+export type TabId = 'articles' | 'sources' | 'chat';
+
+interface TabNavProps {
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
+  unreadCount?: number;
+}
+
+export function TabNav({ activeTab, onTabChange, unreadCount }: TabNavProps) {
+  const tabs: { id: TabId; label: string; icon: string }[] = [
+    { id: 'articles', label: '文章', icon: '📰' },
+    { id: 'sources', label: '源', icon: '📡' },
+    { id: 'chat', label: '聊天', icon: '💬' },
+  ];
+
+  return (
+    <nav className="tab-nav">
+      {tabs.map(tab => (
+        <button
+          key={tab.id}
+          className={`tab-nav-item ${activeTab === tab.id ? 'active' : ''}`}
+          onClick={() => onTabChange(tab.id)}
+        >
+          <span className="tab-icon">{tab.icon}</span>
+          <span className="tab-label">{tab.label}</span>
+          {tab.id === 'articles' && unreadCount && unreadCount > 0 && (
+            <span className="tab-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+          )}
+        </button>
+      ))}
+    </nav>
+  );
+}
+```
+
+**Step 3: 创建样式文件**
+
+创建 `src/components/TabNav.css`：
+
+```css
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid #333;
+  background: #1a1a1a;
+}
+
+.tab-nav-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-nav-item:hover {
+  color: #ccc;
+  background: #252525;
+}
+
+.tab-nav-item.active {
+  color: #fff;
+  border-bottom: 2px solid #2563eb;
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+.tab-label {
+  font-size: 13px;
+}
+
+.tab-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 4px;
+}
+```
+
+**Step 4: 验证编译**
+
+Run: `npx tsc --noEmit`
+Expected: 无错误
+
+**Step 5: Commit**
+
+```bash
+git add src/components/TabNav.tsx src/components/TabNav.css
+git commit -m "feat(ui): add TabNav component"
+```
+
+---
+
+## Task 14: 创建文章卡片和列表组件
+
+**Files:**
+- Create: `src/components/ArticleCard.tsx`
+- Create: `src/components/ArticleList.tsx`
+- Create: `src/components/ArticleList.css`
+
+**Step 1: 实现 ArticleCard 组件**
+
+创建 `src/components/ArticleCard.tsx`：
+
+```typescript
+import React from 'react';
+import type { StoredArticle } from '../core/storage/db';
+
+interface ArticleCardProps {
+  article: StoredArticle;
+  onClick: () => void;
+  onMarkRead?: () => void;
+}
+
+export function ArticleCard({ article, onClick, onMarkRead }: ArticleCardProps) {
+  const tags = article.tags ? JSON.parse(article.tags) : [];
+  const timeAgo = formatTimeAgo(article.publishedAt);
+
+  return (
+    <div
+      className={`article-card ${article.isRead ? 'read' : ''}`}
+      onClick={onClick}
+    >
+      <div className="article-header">
+        {article.score !== undefined && (
+          <span className="article-score">★{article.score}</span>
+        )}
+        <h3 className="article-title">{article.title}</h3>
+      </div>
+      <div className="article-meta">
+        {tags.map((tag: string) => (
+          <span key={tag} className="article-tag">{tag}</span>
+        ))}
+        <span className="article-time">{timeAgo}</span>
+      </div>
+      {article.summary && (
+        <p className="article-summary">{article.summary.slice(0, 100)}...</p>
+      )}
+    </div>
+  );
+}
+
+function formatTimeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return '刚刚';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}分钟前`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}小时前`;
+  return `${Math.floor(seconds / 86400)}天前`;
+}
+```
+
+**Step 2: 实现 ArticleList 组件**
+
+创建 `src/components/ArticleList.tsx`：
+
+```typescript
+import React, { useState, useEffect } from 'react';
+import { ArticleCard } from './ArticleCard';
+import { ArticleDetail } from './ArticleDetail';
+import { db, StoredArticle } from '../core/storage/db';
+import './ArticleList.css';
+
+interface ArticleListProps {
+  onArticleView?: (articleId: string) => void;
+}
+
+export function ArticleList({ onArticleView }: ArticleListProps) {
+  const [articles, setArticles] = useState<StoredArticle[]>([]);
+  const [selectedArticle, setSelectedArticle] = useState<StoredArticle | null>(null);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'favorites'>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'score'>('date');
+
+  useEffect(() => {
+    loadArticles();
+  }, [filter, sortBy]);
+
+  const loadArticles = async () => {
+    let query = db.articles.where('filtered').equals(0);
+
+    const all = await query.toArray();
+
+    let filtered = all;
+    if (filter === 'unread') {
+      filtered = all.filter(a => !a.isRead);
+    } else if (filter === 'favorites') {
+      filtered = all.filter(a => a.isFavorite);
+    }
+
+    if (sortBy === 'score') {
+      filtered.sort((a, b) => (b.score || 0) - (a.score || 0));
+    } else {
+      filtered.sort((a, b) => b.publishedAt - a.publishedAt);
+    }
+
+    setArticles(filtered);
+  };
+
+  const handleArticleClick = async (article: StoredArticle) => {
+    setSelectedArticle(article);
+    if (!article.isRead) {
+      await db.articles.update(article.id, { isRead: true });
+      loadArticles();
+    }
+    onArticleView?.(article.id);
+  };
+
+  if (selectedArticle) {
+    return (
+      <ArticleDetail
+        article={selectedArticle}
+        onBack={() => setSelectedArticle(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="article-list">
+      <div className="article-filters">
+        <select value={filter} onChange={e => setFilter(e.target.value as any)}>
+          <option value="all">全部</option>
+          <option value="unread">未读</option>
+          <option value="favorites">收藏</option>
+        </select>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}>
+          <option value="date">按时间</option>
+          <option value="score">按评分</option>
+        </select>
+      </div>
+      <div className="article-list-content">
+        {articles.length === 0 ? (
+          <div className="empty-state">暂无文章</div>
+        ) : (
+          articles.map(article => (
+            <ArticleCard
+              key={article.id}
+              article={article}
+              onClick={() => handleArticleClick(article)}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+**Step 3: 创建样式文件**
+
+创建 `src/components/ArticleList.css`：
+
+```css
+.article-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.article-filters {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.article-filters select {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #252525;
+  color: #fff;
+}
+
+.article-list-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.article-card {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #252525;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.article-card:hover {
+  background: #303030;
+}
+
+.article-card.read {
+  opacity: 0.7;
+}
+
+.article-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.article-score {
+  color: #fbbf24;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.article-title {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.article-tag {
+  padding: 2px 8px;
+  background: #333;
+  border-radius: 4px;
+  color: #888;
+}
+
+.article-time {
+  color: #666;
+}
+
+.article-summary {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #999;
+  line-height: 1.4;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+```
+
+**Step 4: 验证编译**
+
+Run: `npx tsc --noEmit`
+Expected: 无错误
+
+**Step 5: Commit**
+
+```bash
+git add src/components/ArticleCard.tsx src/components/ArticleList.tsx src/components/ArticleList.css
+git commit -m "feat(ui): add ArticleCard and ArticleList components"
+```
+
+---
+
+## Task 15: 创建文章详情组件
+
+**Files:**
+- Create: `src/components/ArticleDetail.tsx`
+- Create: `src/components/ArticleDetail.css`
+
+**Step 1: 实现 ArticleDetail 组件**
+
+创建 `src/components/ArticleDetail.tsx`：
+
+```typescript
+import React from 'react';
+import type { StoredArticle } from '../core/storage/db';
+import { db } from '../core/storage/db';
+import './ArticleDetail.css';
+
+interface ArticleDetailProps {
+  article: StoredArticle;
+  onBack: () => void;
+}
+
+export function ArticleDetail({ article, onBack }: ArticleDetailProps) {
+  const tags = article.tags ? JSON.parse(article.tags) : [];
+
+  const handleOpenOriginal = () => {
+    chrome.tabs.create({ url: article.url });
+  };
+
+  const handleToggleFavorite = async () => {
+    await db.articles.update(article.id, { isFavorite: !article.isFavorite });
+  };
+
+  return (
+    <div className="article-detail">
+      <div className="article-detail-header">
+        <button className="back-btn" onClick={onBack}>← 返回</button>
+        <button
+          className={`favorite-btn ${article.isFavorite ? 'active' : ''}`}
+          onClick={handleToggleFavorite}
+        >
+          {article.isFavorite ? '★' : '☆'}
+        </button>
+      </div>
+
+      <div className="article-detail-content">
+        <h1 className="article-detail-title">{article.title}</h1>
+
+        <div className="article-detail-meta">
+          {article.score !== undefined && (
+            <span className="score-badge">评分: {article.score}/10</span>
+          )}
+          {tags.map((tag: string) => (
+            <span key={tag} className="tag-badge">{tag}</span>
+          ))}
+          {article.author && <span className="author">作者: {article.author}</span>}
+        </div>
+
+        {article.summary && (
+          <div className="article-summary-section">
+            <h3>AI 摘要</h3>
+            <p>{article.summary}</p>
+          </div>
+        )}
+
+        <div className="article-original-section">
+          <h3>原文预览</h3>
+          <p>{article.content.slice(0, 500)}...</p>
+          <button className="open-original-btn" onClick={handleOpenOriginal}>
+            阅读原文 →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+**Step 2: 创建样式文件**
+
+创建 `src/components/ArticleDetail.css`：
+
+```css
+.article-detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.article-detail-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.back-btn {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.favorite-btn {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.favorite-btn.active {
+  color: #fbbf24;
+}
+
+.article-detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.article-detail-title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.4;
+}
+
+.article-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.score-badge {
+  padding: 4px 10px;
+  background: #fbbf24;
+  color: #000;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tag-badge {
+  padding: 4px 10px;
+  background: #333;
+  color: #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.author {
+  color: #888;
+  font-size: 12px;
+}
+
+.article-summary-section,
+.article-original-section {
+  margin-bottom: 20px;
+}
+
+.article-summary-section h3,
+.article-original-section h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #888;
+  font-weight: 500;
+}
+
+.article-summary-section p,
+.article-original-section p {
+  margin: 0;
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.6;
+}
+
+.open-original-btn {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.open-original-btn:hover {
+  background: #1d4ed8;
+}
+```
+
+**Step 3: 验证编译**
+
+Run: `npx tsc --noEmit`
+Expected: 无错误
+
+**Step 4: Commit**
+
+```bash
+git add src/components/ArticleDetail.tsx src/components/ArticleDetail.css
+git commit -m "feat(ui): add ArticleDetail component"
+```
+
+---
+
+## Task 16: 创建信息源管理组件
+
+**Files:**
+- Create: `src/components/SourceList.tsx`
+- Create: `src/components/SourceCard.tsx`
+- Create: `src/components/SourceForm.tsx`
+- Create: `src/components/SourceList.css`
+
+**Step 1: 实现 SourceCard 组件**
+
+创建 `src/components/SourceCard.tsx`：
+
+```typescript
+import React from 'react';
+import type { StoredSource } from '../core/storage/db';
+
+interface SourceCardProps {
+  source: StoredSource;
+  articleCount?: number;
+  onClick: () => void;
+  onToggleEnabled: () => void;
+}
+
+export function SourceCard({ source, articleCount, onClick, onToggleEnabled }: SourceCardProps) {
+  const lastFetch = source.lastFetchAt
+    ? formatTimeAgo(source.lastFetchAt)
+    : '从未';
+
+  return (
+    <div className="source-card" onClick={onClick}>
+      <div className="source-header">
+        <span className="source-icon">📡</span>
+        <span className="source-name">{source.name}</span>
+        <button
+          className={`source-toggle ${source.enabled ? 'enabled' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleEnabled();
+          }}
+        >
+          {source.enabled ? '✓' : '○'}
+        </button>
+      </div>
+      <div className="source-meta">
+        <span>{source.type.toUpperCase()}</span>
+        <span>·</span>
+        <span>每{source.schedule}</span>
+        <span>·</span>
+        <span>上次: {lastFetch}</span>
+      </div>
+      {source.lastError && (
+        <div className="source-error">⚠ {source.lastError}</div>
+      )}
+    </div>
+  );
+}
+
+function formatTimeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return '刚刚';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}分钟前`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}小时前`;
+  return `${Math.floor(seconds / 86400)}天前`;
+}
+```
+
+**Step 2: 实现 SourceForm 组件**
+
+创建 `src/components/SourceForm.tsx`：
+
+```typescript
+import React, { useState } from 'react';
+import type { StoredSource } from '../core/storage/db';
+
+interface SourceFormProps {
+  source?: StoredSource;
+  onSave: (data: Partial<StoredSource>) => void;
+  onCancel: () => void;
+}
+
+export function SourceForm({ source, onSave, onCancel }: SourceFormProps) {
+  const [name, setName] = useState(source?.name || '');
+  const [url, setUrl] = useState(source ? JSON.parse(source.config).url : '');
+  const [schedule, setSchedule] = useState(source?.schedule || '1h');
+  const [enableSummary, setEnableSummary] = useState(true);
+  const [enableClassify, setEnableClassify] = useState(true);
+  const [enableScore, setEnableScore] = useState(true);
+  const [enableFilter, setEnableFilter] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      name,
+      type: 'rss',
+      schedule,
+      enabled: true,
+      config: JSON.stringify({
+        url,
+        pipeline: {
+          summarizer: enableSummary,
+          classifier: enableClassify,
+          scorer: enableScore,
+          filter: enableFilter,
+        },
+      }),
+    });
+  };
+
+  return (
+    <form className="source-form" onSubmit={handleSubmit}>
+      <h2>{source ? '编辑信息源' : '添加信息源'}</h2>
+
+      <div className="form-group">
+        <label>名称</label>
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="例如: Hacker News"
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label>RSS URL</label>
+        <input
+          type="url"
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          placeholder="https://example.com/feed.xml"
+          required
+        />
+      </div>
+
+      <div className="form-group">
+        <label>更新频率</label>
+        <select value={schedule} onChange={e => setSchedule(e.target.value)}>
+          <option value="30m">每30分钟</option>
+          <option value="1h">每1小时</option>
+          <option value="2h">每2小时</option>
+          <option value="1d">每天</option>
+        </select>
+      </div>
+
+      <div className="form-section">
+        <h3>AI 处理设置</h3>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={enableSummary}
+            onChange={e => setEnableSummary(e.target.checked)}
+          />
+          生成摘要
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={enableClassify}
+            onChange={e => setEnableClassify(e.target.checked)}
+          />
+          自动分类
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={enableScore}
+            onChange={e => setEnableScore(e.target.checked)}
+          />
+          重要性评分
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={enableFilter}
+            onChange={e => setEnableFilter(e.target.checked)}
+          />
+          智能过滤
+        </label>
+      </div>
+
+      <div className="form-actions">
+        <button type="button" onClick={onCancel}>取消</button>
+        <button type="submit" className="primary">保存</button>
+      </div>
+    </form>
+  );
+}
+```
+
+**Step 3: 实现 SourceList 组件**
+
+创建 `src/components/SourceList.tsx`：
+
+```typescript
+import React, { useState, useEffect } from 'react';
+import { SourceCard } from './SourceCard';
+import { SourceForm } from './SourceForm';
+import { db, StoredSource } from '../core/storage/db';
+import './SourceList.css';
+
+export function SourceList() {
+  const [sources, setSources] = useState<StoredSource[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingSource, setEditingSource] = useState<StoredSource | null>(null);
+
+  useEffect(() => {
+    loadSources();
+  }, []);
+
+  const loadSources = async () => {
+    const all = await db.sources.toArray();
+    setSources(all);
+  };
+
+  const handleSave = async (data: Partial<StoredSource>) => {
+    if (editingSource) {
+      await db.sources.update(editingSource.id, data);
+    } else {
+      await db.sources.add({
+        id: `source-${Date.now()}`,
+        ...data,
+      } as StoredSource);
+    }
+    setShowForm(false);
+    setEditingSource(null);
+    loadSources();
+  };
+
+  const handleToggleEnabled = async (source: StoredSource) => {
+    await db.sources.update(source.id, { enabled: !source.enabled });
+    loadSources();
+  };
+
+  const handleDelete = async (sourceId: string) => {
+    if (confirm('确定删除此信息源？')) {
+      await db.sources.delete(sourceId);
+      loadSources();
+    }
+  };
+
+  if (showForm || editingSource) {
+    return (
+      <SourceForm
+        source={editingSource || undefined}
+        onSave={handleSave}
+        onCancel={() => {
+          setShowForm(false);
+          setEditingSource(null);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="source-list">
+      <div className="source-list-header">
+        <h2>我的信息源</h2>
+        <button className="add-btn" onClick={() => setShowForm(true)}>+</button>
+      </div>
+      <div className="source-list-content">
+        {sources.length === 0 ? (
+          <div className="empty-state">
+            <p>暂无信息源</p>
+            <button onClick={() => setShowForm(true)}>添加第一个</button>
+          </div>
+        ) : (
+          sources.map(source => (
+            <SourceCard
+              key={source.id}
+              source={source}
+              onClick={() => setEditingSource(source)}
+              onToggleEnabled={() => handleToggleEnabled(source)}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+**Step 4: 创建样式文件**
+
+创建 `src/components/SourceList.css`：
+
+```css
+.source-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.source-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #333;
+}
+
+.source-list-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.add-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.source-list-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.source-card {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #252525;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.source-card:hover {
+  background: #303030;
+}
+
+.source-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.source-icon {
+  font-size: 16px;
+}
+
+.source-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.source-toggle {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.source-toggle.enabled {
+  color: #22c55e;
+}
+
+.source-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #888;
+}
+
+.source-error {
+  margin-top: 8px;
+  padding: 8px;
+  background: #451a1a;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #fca5a5;
+}
+
+/* Form styles */
+.source-form {
+  padding: 16px;
+}
+
+.source-form h2 {
+  margin: 0 0 20px;
+  font-size: 18px;
+  color: #fff;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #888;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #252525;
+  color: #fff;
+  font-size: 14px;
+}
+
+.form-section {
+  margin: 20px 0;
+  padding-top: 16px;
+  border-top: 1px solid #333;
+}
+
+.form-section h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #888;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.form-actions button {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: transparent;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.form-actions button.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.empty-state button {
+  margin-top: 12px;
+  padding: 10px 20px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+```
+
+**Step 5: 验证编译**
+
+Run: `npx tsc --noEmit`
+Expected: 无错误
+
+**Step 6: Commit**
+
+```bash
+git add src/components/SourceCard.tsx src/components/SourceForm.tsx src/components/SourceList.tsx src/components/SourceList.css
+git commit -m "feat(ui): add SourceList, SourceCard, and SourceForm components"
+```
+
+---
+
+## Task 17: 集成 UI 到 sidepanel
+
+**Files:**
+- Modify: `sidepanel.tsx`
+
+**Step 1: 更新 sidepanel.tsx**
+
+在 `sidepanel.tsx` 顶部添加导入：
+
+```typescript
+import { TabNav, TabId } from './src/components/TabNav';
+import { ArticleList } from './src/components/ArticleList';
+import { SourceList } from './src/components/SourceList';
+import './src/components/TabNav.css';
+```
+
+**Step 2: 添加标签页状态**
+
+在 `ChatSidebar` 组件中添加：
+
+```typescript
+const [activeTab, setActiveTab] = useState<TabId>('chat');
+```
+
+**Step 3: 更新渲染逻辑**
+
+修改 return 部分，在 chat-header 后添加 TabNav，并根据 activeTab 渲染不同内容：
+
+```typescript
+return (
+  <div className="chat-container dark-mode">
+    <div className="chat-header">
+      {/* 保持现有 header */}
+    </div>
+
+    <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
+
+    {activeTab === 'articles' && <ArticleList />}
+    {activeTab === 'sources' && <SourceList />}
+    {activeTab === 'chat' && (
+      <>
+        {/* 现有的聊天 UI */}
+      </>
+    )}
+  </div>
+);
+```
+
+**Step 4: 验证编译和构建**
+
+Run: `npx tsc --noEmit && npm run build`
+Expected: 无错误
+
+**Step 5: 测试 Chrome Extension**
+
+1. 在 Chrome 加载 dist/ 目录
+2. 打开 sidepanel
+3. 验证三个标签页切换正常
+
+**Step 6: Commit**
+
+```bash
+git add sidepanel.tsx
+git commit -m "feat(ui): integrate TabNav and content pages into sidepanel"
+```
+
+---
+
+## Task 18: 运行全部测试并验证
+
+**Step 1: 运行所有测试**
+
+Run: `npm test`
+Expected: 全部 PASS
+
+**Step 2: 运行构建**
+
+Run: `npm run build`
+Expected: 构建成功
+
+**Step 3: Commit（如有修复）**
+
+```bash
+git add .
+git commit -m "fix: resolve any remaining issues"
+```
+
+---
+
 ## 完成检查清单
 
+**核心处理层：**
 - [ ] 存储层扩展（新字段 + 数据库版本升级）
 - [ ] 处理器类型定义
 - [ ] LLM 客户端（多 provider 支持）
@@ -1749,8 +2935,21 @@ git commit -m "fix: resolve any remaining issues"
 - [ ] Pipeline 执行管道
 - [ ] ProcessorJob 批量任务
 - [ ] 模块入口和导出
+
+**UI 组件：**
+- [ ] TabNav 标签页导航
+- [ ] ArticleCard 文章卡片
+- [ ] ArticleList 文章列表
+- [ ] ArticleDetail 文章详情
+- [ ] SourceCard 源卡片
+- [ ] SourceForm 源表单
+- [ ] SourceList 源列表
+- [ ] sidepanel 集成
+
+**验证：**
 - [ ] 所有测试通过
 - [ ] 构建成功
+- [ ] Chrome Extension 功能正常
 
 ---
 
