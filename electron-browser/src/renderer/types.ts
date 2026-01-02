@@ -6,13 +6,13 @@ export type LLMProvider = 'google' | 'openai' | 'anthropic' | 'ollama' | 'custom
  * Optional LLM configuration parameters
  */
 export interface LLMOptions {
-  /** Controls randomness in responses. Range: 0 (deterministic) to 2 (creative). */
+  /** Controls randomness in responses. Range: 0 (deterministic) to 2 (creative). Default varies by provider. */
   temperature?: number;
   /** Maximum number of tokens in the response. */
   maxTokens?: number;
   /** Request timeout in seconds. */
   timeout?: number;
-  /** Custom HTTP headers for API requests. */
+  /** Custom HTTP headers for API requests (e.g., for proxies or custom auth). */
   headers?: Record<string, string>;
 }
 
