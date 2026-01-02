@@ -1,0 +1,64 @@
+{
+  "app": {
+    "title": "Atlas",
+    "subtitle": "Intelligent Information Hub",
+    "search": "Search...",
+    "newChat": "New Chat",
+    "settings": "Settings"
+  },
+  "chat": {
+    "placeholder": "Message Atlas...",
+    "send": "Send",
+    "stop": "Stop",
+    "welcome": "How can I help you today?",
+    "welcomeDesc": "I'm Atlas, your AI assistant. I can help you browse the web, analyze content, and perform various tasks."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure your AI provider and preferences",
+    "llm": {
+      "title": "LLM Configuration",
+      "provider": "Provider",
+      "baseUrl": "Base URL",
+      "apiKey": "API Key",
+      "model": "Model",
+      "testConnection": "Test Connection",
+      "testing": "Testing...",
+      "connected": "Connected",
+      "failed": "Failed",
+      "advancedOptions": "Advanced Options",
+      "temperature": "Temperature",
+      "maxTokens": "Max Tokens",
+      "timeout": "Timeout (seconds)"
+    },
+    "composio": {
+      "title": "Composio API Key",
+      "placeholder": "Enter your Composio API key (optional)",
+      "help": "Enable Composio Tool Router for access to 500+ app integrations"
+    },
+    "language": {
+      "title": "Language",
+      "auto": "System Default",
+      "zh": "中文",
+      "en": "English"
+    },
+    "save": "Save Settings",
+    "saved": "Saved!",
+    "privacy": {
+      "title": "Privacy & Security",
+      "desc": "Your API keys are stored locally in your browser and only sent to the respective AI providers. Never shared with third parties."
+    }
+  },
+  "providers": {
+    "google": "Google Gemini",
+    "openai": "OpenAI",
+    "anthropic": "Anthropic Claude",
+    "ollama": "Ollama (Local)",
+    "custom": "Custom API"
+  },
+  "errors": {
+    "apiKeyRequired": "Please configure your API key first",
+    "connectionFailed": "Connection failed",
+    "networkError": "Network error"
+  }
+}

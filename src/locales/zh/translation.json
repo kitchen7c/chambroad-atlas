@@ -1,0 +1,64 @@
+{
+  "app": {
+    "title": "Atlas",
+    "subtitle": "智能信息中枢",
+    "search": "搜索...",
+    "newChat": "新对话",
+    "settings": "设置"
+  },
+  "chat": {
+    "placeholder": "输入消息...",
+    "send": "发送",
+    "stop": "停止",
+    "welcome": "今天我能帮你做什么？",
+    "welcomeDesc": "我是 Atlas，你的 AI 助手。我可以帮你浏览网页、分析内容、执行各种任务。"
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "配置你的 AI 服务商和偏好",
+    "llm": {
+      "title": "大模型配置",
+      "provider": "服务商",
+      "baseUrl": "API 地址",
+      "apiKey": "API 密钥",
+      "model": "模型",
+      "testConnection": "测试连接",
+      "testing": "测试中...",
+      "connected": "已连接",
+      "failed": "连接失败",
+      "advancedOptions": "高级选项",
+      "temperature": "温度",
+      "maxTokens": "最大 Token 数",
+      "timeout": "超时时间（秒）"
+    },
+    "composio": {
+      "title": "Composio API Key",
+      "placeholder": "输入你的 Composio API key（可选）",
+      "help": "启用 Composio Tool Router 以访问 500+ 应用集成"
+    },
+    "language": {
+      "title": "语言",
+      "auto": "跟随系统",
+      "zh": "中文",
+      "en": "English"
+    },
+    "save": "保存设置",
+    "saved": "已保存！",
+    "privacy": {
+      "title": "隐私与安全",
+      "desc": "你的 API 密钥仅存储在本地浏览器中，只会发送给相应的 AI 服务商。绝不会与第三方共享。"
+    }
+  },
+  "providers": {
+    "google": "Google Gemini",
+    "openai": "OpenAI",
+    "anthropic": "Anthropic Claude",
+    "ollama": "Ollama（本地）",
+    "custom": "自定义 API"
+  },
+  "errors": {
+    "apiKeyRequired": "请先配置 API Key",
+    "connectionFailed": "连接失败",
+    "networkError": "网络错误"
+  }
+}
