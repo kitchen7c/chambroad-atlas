@@ -48,6 +48,9 @@
     "google": "Google Gemini",
     "openai": "OpenAI",
     "anthropic": "Anthropic Claude",
+    "deepseek": "深度求索 (Deepseek)",
+    "qwen": "通义千问 (Qwen)",
+    "glm": "智谱清言 (GLM)",
     "ollama": "Ollama（本地）",
     "custom": "自定义 API"
   },

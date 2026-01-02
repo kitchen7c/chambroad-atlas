@@ -48,6 +48,9 @@
     "google": "Google Gemini",
     "openai": "OpenAI",
     "anthropic": "Anthropic Claude",
+    "deepseek": "Deepseek",
+    "qwen": "Qwen (Alibaba)",
+    "glm": "GLM (Zhipu AI)",
     "ollama": "Ollama (Local)",
     "custom": "Custom API"
   },

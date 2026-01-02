@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export type LLMProvider = 'google' | 'openai' | 'anthropic' | 'ollama' | 'custom';
+export type LLMProvider = 'google' | 'openai' | 'anthropic' | 'deepseek' | 'qwen' | 'glm' | 'ollama' | 'custom';
 
 /**
  * Optional LLM configuration parameters
@@ -43,6 +43,21 @@ export const LLM_PROVIDER_PRESETS: Record<Exclude<LLMProvider, 'custom'>, { base
     baseUrl: 'https://api.anthropic.com/v1',
     defaultModel: 'claude-3-opus-20240229',
     models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
+  },
+  deepseek: {
+    baseUrl: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    models: ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'],
+  },
+  qwen: {
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    defaultModel: 'qwen-max',
+    models: ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen-long'],
+  },
+  glm: {
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    defaultModel: 'glm-4-plus',
+    models: ['glm-4-plus', 'glm-4-air', 'glm-4-flash', 'glm-4-long'],
   },
   ollama: {
     baseUrl: 'http://localhost:11434/v1',
@@ -90,7 +105,7 @@ export interface BrowserAction {
 // This prevents corrupted or malicious data from being used
 
 export const LLMConfigSchema = z.object({
-  provider: z.enum(['google', 'openai', 'anthropic', 'ollama', 'custom']),
+  provider: z.enum(['google', 'openai', 'anthropic', 'deepseek', 'qwen', 'glm', 'ollama', 'custom']),
   baseUrl: z.string().url(),
   apiKey: z.string(),
   model: z.string().min(1),
