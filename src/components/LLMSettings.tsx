@@ -1,0 +1,203 @@
+import { useState } from 'react';
+import type { LLMConfig, LLMProvider } from '../../types';
+import { LLM_PROVIDER_PRESETS } from '../../types';
+
+interface LLMSettingsProps {
+  config: LLMConfig | undefined;
+  onChange: (config: LLMConfig) => void;
+  onTestConnection?: () => Promise<{ success: boolean; error?: string }>;
+}
+
+export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsProps) {
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [isCustom, setIsCustom] = useState(config?.provider === 'custom');
+  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [testError, setTestError] = useState<string>('');
+
+  const defaultConfig: LLMConfig = {
+    provider: 'google',
+    baseUrl: LLM_PROVIDER_PRESETS.google.baseUrl,
+    apiKey: '',
+    model: LLM_PROVIDER_PRESETS.google.defaultModel,
+  };
+
+  const currentConfig = config || defaultConfig;
+
+  const handleProviderChange = (provider: LLMProvider) => {
+    if (provider === 'custom') {
+      setIsCustom(true);
+      onChange({
+        ...currentConfig,
+        provider: 'custom',
+      });
+    } else {
+      setIsCustom(false);
+      const preset = LLM_PROVIDER_PRESETS[provider];
+      onChange({
+        ...currentConfig,
+        provider,
+        baseUrl: preset.baseUrl,
+        model: preset.defaultModel,
+      });
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!onTestConnection) return;
+
+    setTestStatus('testing');
+    setTestError('');
+
+    try {
+      const result = await onTestConnection();
+      if (result.success) {
+        setTestStatus('success');
+      } else {
+        setTestStatus('error');
+        setTestError(result.error || 'Connection failed');
+      }
+    } catch (e) {
+      setTestStatus('error');
+      setTestError(e instanceof Error ? e.message : 'Unknown error');
+    }
+
+    setTimeout(() => setTestStatus('idle'), 3000);
+  };
+
+  const availableModels = isCustom
+    ? []
+    : LLM_PROVIDER_PRESETS[currentConfig.provider as Exclude<LLMProvider, 'custom'>]?.models || [];
+
+  return (
+    <div className="llm-settings">
+      <h3>🤖 LLM Configuration</h3>
+
+      <div className="setting-group">
+        <label>Provider</label>
+        <select
+          value={currentConfig.provider}
+          onChange={(e) => handleProviderChange(e.target.value as LLMProvider)}
+        >
+          <option value="google">Google Gemini</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic Claude</option>
+          <option value="ollama">Ollama (Local)</option>
+          <option value="custom">Custom API</option>
+        </select>
+      </div>
+
+      <div className="setting-group">
+        <label>Base URL</label>
+        <input
+          type="text"
+          value={currentConfig.baseUrl}
+          onChange={(e) => onChange({ ...currentConfig, baseUrl: e.target.value })}
+          placeholder="https://api.example.com/v1"
+          disabled={!isCustom && currentConfig.provider !== 'custom'}
+        />
+        {!isCustom && (
+          <p className="help-text">Using default URL for {currentConfig.provider}</p>
+        )}
+      </div>
+
+      <div className="setting-group">
+        <label>API Key</label>
+        <div className="api-key-input-wrapper">
+          <input
+            type={showApiKey ? 'text' : 'password'}
+            value={currentConfig.apiKey}
+            onChange={(e) => onChange({ ...currentConfig, apiKey: e.target.value })}
+            placeholder="Enter your API key"
+          />
+          <button
+            type="button"
+            className="toggle-visibility"
+            onClick={() => setShowApiKey(!showApiKey)}
+          >
+            {showApiKey ? '👁️' : '👁️‍🗨️'}
+          </button>
+        </div>
+      </div>
+
+      <div className="setting-group">
+        <label>Model</label>
+        {isCustom ? (
+          <input
+            type="text"
+            value={currentConfig.model}
+            onChange={(e) => onChange({ ...currentConfig, model: e.target.value })}
+            placeholder="Enter model name (e.g., gpt-4-turbo)"
+          />
+        ) : (
+          <select
+            value={currentConfig.model}
+            onChange={(e) => onChange({ ...currentConfig, model: e.target.value })}
+          >
+            {availableModels.map((model) => (
+              <option key={model} value={model}>{model}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <details className="advanced-options">
+        <summary>Advanced Options</summary>
+        <div className="setting-group">
+          <label>Temperature</label>
+          <input
+            type="number"
+            min="0"
+            max="2"
+            step="0.1"
+            value={currentConfig.options?.temperature ?? 0.7}
+            onChange={(e) => onChange({
+              ...currentConfig,
+              options: { ...currentConfig.options, temperature: parseFloat(e.target.value) }
+            })}
+          />
+        </div>
+        <div className="setting-group">
+          <label>Max Tokens</label>
+          <input
+            type="number"
+            min="1"
+            value={currentConfig.options?.maxTokens ?? 4096}
+            onChange={(e) => onChange({
+              ...currentConfig,
+              options: { ...currentConfig.options, maxTokens: parseInt(e.target.value) }
+            })}
+          />
+        </div>
+        <div className="setting-group">
+          <label>Timeout (seconds)</label>
+          <input
+            type="number"
+            min="1"
+            value={currentConfig.options?.timeout ?? 60}
+            onChange={(e) => onChange({
+              ...currentConfig,
+              options: { ...currentConfig.options, timeout: parseInt(e.target.value) }
+            })}
+          />
+        </div>
+      </details>
+
+      {onTestConnection && (
+        <div className="test-connection">
+          <button
+            onClick={handleTestConnection}
+            disabled={testStatus === 'testing' || !currentConfig.apiKey}
+            className={`test-button ${testStatus}`}
+          >
+            {testStatus === 'testing' ? 'Testing...' :
+             testStatus === 'success' ? '✓ Connected' :
+             testStatus === 'error' ? '✗ Failed' : 'Test Connection'}
+          </button>
+          {testError && <p className="error-text">{testError}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default LLMSettings;
