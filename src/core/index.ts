@@ -11,3 +11,12 @@ export { RSSSource } from './sources/rss';
 
 // Scheduler
 export { scheduler, Scheduler, parseSchedule } from './scheduler/scheduler';
+
+// P2: Processors
+export * from './processors';
+
+// P2: LLM
+export * from './llm';
+
+// P2: Jobs
+export * from './jobs';
