@@ -98,6 +98,9 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
           <option value="google">{t('providers.google')}</option>
           <option value="openai">{t('providers.openai')}</option>
           <option value="anthropic">{t('providers.anthropic')}</option>
+          <option value="deepseek">{t('providers.deepseek')}</option>
+          <option value="qwen">{t('providers.qwen')}</option>
+          <option value="glm">{t('providers.glm')}</option>
           <option value="ollama">{t('providers.ollama')}</option>
           <option value="custom">{t('providers.custom')}</option>
         </select>
