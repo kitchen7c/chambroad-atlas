@@ -114,7 +114,7 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
           disabled={!isCustom && currentConfig.provider !== 'custom'}
         />
         {!isCustom && (
-          <p className="help-text">Using default URL for {currentConfig.provider}</p>
+          <p className="help-text">{t('settings.llm.baseUrlHelp', { provider: currentConfig.provider })}</p>
         )}
       </div>
 
@@ -126,13 +126,13 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
             type={showApiKey ? 'text' : 'password'}
             value={currentConfig.apiKey}
             onChange={(e) => onChange({ ...currentConfig, apiKey: e.target.value })}
-            placeholder="Enter your API key"
+            placeholder={t('settings.llm.apiKeyPlaceholder')}
           />
           <button
             type="button"
             className="toggle-visibility"
             onClick={() => setShowApiKey(!showApiKey)}
-            aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+            aria-label={showApiKey ? t('settings.llm.apiKeyHide') : t('settings.llm.apiKeyShow')}
           >
             {showApiKey ? '👁️' : '👁️‍🗨️'}
           </button>
@@ -147,7 +147,7 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
             type="text"
             value={currentConfig.model}
             onChange={(e) => onChange({ ...currentConfig, model: e.target.value })}
-            placeholder="Enter model name (e.g., gpt-4-turbo)"
+            placeholder={t('settings.llm.modelPlaceholder')}
           />
         ) : (
           <select
