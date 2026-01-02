@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { db, type StoredArticle, type StoredSource } from '../core/storage/db';
 import { ProcessorJob } from '../core/jobs/processor-job';
+import type { LLMConfig, Settings } from '../../types';
 
 interface ArticleDetailProps {
   articleId: string;
@@ -16,6 +17,7 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
   const [source, setSource] = useState<StoredSource | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
+  const [llmConfig, setLlmConfig] = useState<LLMConfig | null>(null);
 
   useEffect(() => {
     const loadArticle = async () => {
@@ -33,6 +35,14 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
       }
     };
     loadArticle();
+
+    // Load LLM config from storage
+    chrome.storage.local.get('settings', (result) => {
+      const settings = result.settings as Settings | undefined;
+      if (settings?.llm) {
+        setLlmConfig(settings.llm);
+      }
+    });
   }, [articleId]);
 
   const toggleFavorite = async () => {
@@ -50,6 +60,10 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
 
   const processArticle = async () => {
     if (!article || isProcessing) return;
+    if (!llmConfig || !llmConfig.apiKey) {
+      console.warn('No LLM config available. Please configure in settings.');
+      return;
+    }
     setIsProcessing(true);
     try {
       const job = new ProcessorJob({
@@ -57,9 +71,9 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
         intervalMs: 0,
         defaultPipeline: {
           processors: [
-            { type: 'summarizer', config: { enabled: true, options: {} } },
-            { type: 'classifier', config: { enabled: true, options: {} } },
-            { type: 'scorer', config: { enabled: true, options: {} } },
+            { type: 'summarizer', config: { enabled: true, options: { llmConfig } } },
+            { type: 'classifier', config: { enabled: true, options: { llmConfig } } },
+            { type: 'scorer', config: { enabled: true, options: { llmConfig } } },
           ],
         },
       });
@@ -112,8 +126,14 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
           <button
             className="action-btn process-btn"
             onClick={processArticle}
-            disabled={isProcessing}
-            title={isProcessed ? t('articles.ai.processed') : t('articles.ai.process')}
+            disabled={isProcessing || !llmConfig?.apiKey}
+            title={
+              !llmConfig?.apiKey
+                ? t('errors.apiKeyRequired')
+                : isProcessed
+                  ? t('articles.ai.processed')
+                  : t('articles.ai.process')
+            }
           >
             {isProcessing ? '⏳' : isProcessed ? '✓' : '⚡'}
           </button>
