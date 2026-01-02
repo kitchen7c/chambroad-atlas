@@ -219,17 +219,25 @@ function ChatSidebar() {
   };
 
   const ensureApiKey = (): string => {
-    if (!settings?.apiKey) {
-      throw new Error('Google API key not configured. Please add it in Settings.');
+    // Support both new llm config and legacy fields
+    const apiKey = settings?.llm?.apiKey || settings?.apiKey;
+    if (!apiKey) {
+      throw new Error('API key not configured. Please add it in Settings.');
     }
-    return settings.apiKey;
+    return apiKey;
   };
 
   const ensureModel = (): string => {
-    if (!settings?.model) {
+    // Support both new llm config and legacy fields
+    const model = settings?.llm?.model || settings?.model;
+    if (!model) {
       throw new Error('AI model not configured. Please select a model in Settings.');
     }
-    return settings.model;
+    return model;
+  };
+
+  const getProvider = (): string => {
+    return settings?.llm?.provider || settings?.provider || 'google';
   };
 
   const toggleBrowserTools = async () => {
@@ -243,7 +251,9 @@ function ChatSidebar() {
         return;
       }
 
-      if (settings.provider !== 'google' || !settings.apiKey) {
+      const provider = getProvider();
+      const apiKey = settings?.llm?.apiKey || settings?.apiKey;
+      if (provider !== 'google' || !apiKey) {
         const confirmed = window.confirm(
           '🌐 Browser Tools requires a Google API key\n\n' +
           'Browser Tools uses Gemini 2.5 Computer Use for browser automation.\n\n' +
@@ -1046,7 +1056,9 @@ GUIDELINES:
       if (browserToolsEnabled) {
 
         // Safety check: Ensure we have Google API key
-        if (settings.provider !== 'google' || !settings.apiKey) {
+        const provider = getProvider();
+        const apiKey = settings?.llm?.apiKey || settings?.apiKey;
+        if (provider !== 'google' || !apiKey) {
           setBrowserToolsEnabled(false);
           setMessages(prev => {
             const updated = [...prev];
@@ -1146,9 +1158,10 @@ GUIDELINES:
         <div style={{ flex: 1 }}>
           <h1>Atlas</h1>
           <p>
-            {(settings?.provider
-              ? settings.provider.charAt(0).toUpperCase() + settings.provider.slice(1)
-              : 'Unknown')} · {browserToolsEnabled ? 'gemini-2.5-computer-use-preview-10-2025' : (settings?.model || 'No model')}
+            {(() => {
+              const provider = getProvider();
+              return provider.charAt(0).toUpperCase() + provider.slice(1);
+            })()} · {browserToolsEnabled ? 'gemini-2.5-computer-use-preview-10-2025' : (settings?.llm?.model || settings?.model || 'No model')}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1187,7 +1200,7 @@ GUIDELINES:
           color: '#92400e',
         }}>
           <strong>Browser Tools Enabled!</strong> Now using Gemini 2.5 Computer Use Preview (overrides your selected model).
-          {!settings?.apiKey && (
+          {!settings?.llm?.apiKey && !settings?.apiKey && (
             <span> Please <a href="#" onClick={(e) => { e.preventDefault(); openSettings(); }} style={{ color: '#2563eb', textDecoration: 'underline' }}>set your Google API key</a> in settings.</span>
           )}
         </div>
