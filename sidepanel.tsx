@@ -6,6 +6,15 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Settings, Message } from './types';
 import { GeminiResponseSchema } from './types';
+import { SourcesView } from './src/components/SourcesView';
+import { ArticlesView } from './src/components/ArticlesView';
+import { ArticleDetail } from './src/components/ArticleDetail';
+
+type ViewState =
+  | { type: 'chat' }
+  | { type: 'sources' }
+  | { type: 'articles'; sourceId?: string }
+  | { type: 'article'; articleId: string };
 
 // Custom component to handle link clicks - opens in new tab
 const LinkComponent = ({ href, children }: { href?: string; children?: React.ReactNode }) => {
@@ -81,6 +90,7 @@ function ChatSidebar() {
   const [browserToolsEnabled, setBrowserToolsEnabled] = useState(false);
   const [showBrowserToolsWarning, setShowBrowserToolsWarning] = useState(false);
   const [isUserScrolled, setIsUserScrolled] = useState(false);
+  const [view, setView] = useState<ViewState>({ type: 'chat' });
   const abortControllerRef = useRef<AbortController | null>(null);
   const listenerAttachedRef = useRef(false);
 
@@ -951,6 +961,8 @@ GUIDELINES:
     // Ensure API credentials are available
     const apiKey = ensureApiKey();
     const model = ensureModel();
+    const provider = getProvider();
+    const baseUrl = settings?.llm?.baseUrl || 'https://generativelanguage.googleapis.com/v1beta';
 
     // Add initial assistant message
     const assistantMessage: Message = {
@@ -964,26 +976,52 @@ GUIDELINES:
       throw new Error('No messages provided to stream');
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: messages.map(m => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: [{ text: m.content || '' }],
-          })),
-        }),
-        signal,
-      }
-    );
+    let response: Response;
+
+    if (provider === 'google') {
+      // Google Gemini API
+      response = await fetch(
+        `${baseUrl}/models/${model}:streamGenerateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: messages.map(m => ({
+              role: m.role === 'user' ? 'user' : 'model',
+              parts: [{ text: m.content || '' }],
+            })),
+          }),
+          signal,
+        }
+      );
+    } else {
+      // OpenAI-compatible API (Deepseek, Qwen, GLM, OpenAI, Anthropic, Ollama, Custom)
+      response = await fetch(
+        `${baseUrl}/chat/completions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: messages.map(m => ({
+              role: m.role,
+              content: m.content || '',
+            })),
+            stream: true,
+          }),
+          signal,
+        }
+      );
+    }
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error?.message || 'Google API request failed');
+      throw new Error(error.error?.message || 'API request failed');
     }
 
     const reader = response.body!.getReader();
@@ -999,11 +1037,16 @@ GUIDELINES:
         if (!parsedAnyChunk && jsonBuffer.trim()) {
           try {
             let data = JSON.parse(jsonBuffer.trim());
-            // Handle array response format
+            // Handle array response format (Google)
             if (Array.isArray(data) && data.length > 0) {
               data = data[0];
             }
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            // Try Google format first
+            let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            // Try OpenAI format
+            if (!text) {
+              text = data.choices?.[0]?.message?.content;
+            }
             if (text) {
               setMessages(prev => {
                 const updated = [...prev];
@@ -1031,22 +1074,47 @@ GUIDELINES:
       for (const line of lines) {
         if (!line.trim()) continue;
 
-        try {
-          const json = JSON.parse(line);
-          const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            parsedAnyChunk = true;
-            setMessages(prev => {
-              const updated = [...prev];
-              const lastMsg = updated[updated.length - 1];
-              if (lastMsg && lastMsg.role === 'assistant') {
-                lastMsg.content += text;
-              }
-              return updated;
-            });
+        // Handle OpenAI SSE format: "data: {...}"
+        if (line.startsWith('data: ')) {
+          const jsonStr = line.slice(6);
+          if (jsonStr === '[DONE]') continue;
+
+          try {
+            const json = JSON.parse(jsonStr);
+            const text = json.choices?.[0]?.delta?.content;
+            if (text) {
+              parsedAnyChunk = true;
+              setMessages(prev => {
+                const updated = [...prev];
+                const lastMsg = updated[updated.length - 1];
+                if (lastMsg && lastMsg.role === 'assistant') {
+                  lastMsg.content += text;
+                }
+                return updated;
+              });
+            }
+          } catch (e) {
+            // Skip invalid JSON
           }
-        } catch (e) {
-          // Skip invalid JSON (expected for formatted responses)
+        } else {
+          // Try Google format (direct JSON per line)
+          try {
+            const json = JSON.parse(line);
+            const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              parsedAnyChunk = true;
+              setMessages(prev => {
+                const updated = [...prev];
+                const lastMsg = updated[updated.length - 1];
+                if (lastMsg && lastMsg.role === 'assistant') {
+                  lastMsg.content += text;
+                }
+                return updated;
+              });
+            }
+          } catch (e) {
+            // Skip invalid JSON (expected for formatted responses)
+          }
         }
       }
     }
@@ -1055,6 +1123,26 @@ GUIDELINES:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading || !settings) return;
+
+    // Handle commands
+    if (input.trim().startsWith('/')) {
+      const cmd = input.trim().toLowerCase();
+      if (cmd === '/sources') {
+        setView({ type: 'sources' });
+        setInput('');
+        return;
+      }
+      if (cmd === '/articles') {
+        setView({ type: 'articles' });
+        setInput('');
+        return;
+      }
+      if (cmd === '/back') {
+        setView({ type: 'chat' });
+        setInput('');
+        return;
+      }
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -1171,6 +1259,41 @@ GUIDELINES:
     );
   }
 
+  // View switching for sources and articles
+  if (view.type === 'sources') {
+    return (
+      <div className="chat-container dark-mode">
+        <SourcesView
+          onBack={() => setView({ type: 'chat' })}
+          onSelectSource={(sourceId) => setView({ type: 'articles', sourceId })}
+        />
+      </div>
+    );
+  }
+
+  if (view.type === 'articles') {
+    return (
+      <div className="chat-container dark-mode">
+        <ArticlesView
+          sourceId={view.sourceId}
+          onBack={() => setView(view.sourceId ? { type: 'sources' } : { type: 'chat' })}
+          onSelectArticle={(articleId) => setView({ type: 'article', articleId })}
+        />
+      </div>
+    );
+  }
+
+  if (view.type === 'article') {
+    return (
+      <div className="chat-container dark-mode">
+        <ArticleDetail
+          articleId={view.articleId}
+          onBack={() => setView({ type: 'articles' })}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="chat-container dark-mode">
       <div className="chat-header">
@@ -1184,6 +1307,13 @@ GUIDELINES:
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={() => setView({ type: 'sources' })}
+            className="settings-icon-btn"
+            title="Sources"
+          >
+            📡
+          </button>
           <button
             onClick={toggleBrowserTools}
             className={`settings-icon-btn ${browserToolsEnabled ? 'active' : ''}`}
