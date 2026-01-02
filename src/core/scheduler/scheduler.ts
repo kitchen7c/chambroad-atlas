@@ -94,6 +94,8 @@ export class Scheduler {
             metadata: JSON.stringify(article.metadata),
             isRead: false,
             isFavorite: false,
+            processedAt: 0,
+            filtered: 0,
           };
           await db.articles.add(storedArticle);
           newCount++;
