@@ -10,7 +10,7 @@ export class RSSSource implements Source {
   readonly type = 'rss' as const;
 
   async validate(config: SourceConfig): Promise<{ valid: boolean; error?: string }> {
-    const { url } = config.config as RSSSourceConfig;
+    const { url } = config.config as unknown as RSSSourceConfig;
 
     if (!url || !url.startsWith('http')) {
       return { valid: false, error: '请输入有效的 RSS URL' };
@@ -28,7 +28,7 @@ export class RSSSource implements Source {
   }
 
   async fetch(config: SourceConfig): Promise<FetchResult> {
-    const { url, maxItems = 50 } = config.config as RSSSourceConfig;
+    const { url, maxItems = 50 } = config.config as unknown as RSSSourceConfig;
 
     try {
       const response = await fetch(url);

@@ -1,6 +1,6 @@
 import { db } from '../storage/db';
 import { registry } from '../sources/registry';
-import type { SourceConfig, SourceType, Article } from '../sources/types';
+import type { SourceConfig, SourceType } from '../sources/types';
 import type { StoredArticle } from '../storage/db';
 
 /**

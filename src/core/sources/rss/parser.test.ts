@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseRSS, RSSItem } from './parser';
+import { parseRSS } from './parser';
 
 const RSS_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
