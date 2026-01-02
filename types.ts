@@ -7,10 +7,17 @@ import { z } from 'zod';
 
 export type LLMProvider = 'google' | 'openai' | 'anthropic' | 'ollama' | 'custom';
 
+/**
+ * Optional LLM configuration parameters
+ */
 export interface LLMOptions {
+  /** Controls randomness in responses. Range: 0 (deterministic) to 2 (creative). Default varies by provider. */
   temperature?: number;
+  /** Maximum number of tokens in the response. */
   maxTokens?: number;
+  /** Request timeout in seconds. */
   timeout?: number;
+  /** Custom HTTP headers for API requests (e.g., for proxies or custom auth). */
   headers?: Record<string, string>;
 }
 
@@ -22,6 +29,10 @@ export interface LLMConfig {
   options?: LLMOptions;
 }
 
+/**
+ * Pre-configured settings for supported LLM providers.
+ * Note: 'custom' provider is excluded as it requires user-defined configuration.
+ */
 export const LLM_PROVIDER_PRESETS: Record<Exclude<LLMProvider, 'custom'>, { baseUrl: string; defaultModel: string; models: string[] }> = {
   google: {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
@@ -48,13 +59,14 @@ export const LLM_PROVIDER_PRESETS: Record<Exclude<LLMProvider, 'custom'>, { base
 export type ToolMode = 'tool-router';
 
 export interface Settings {
-  // LLM 配置
+  // New LLM configuration (supports multiple providers)
   llm: LLMConfig;
-  // 兼容旧字段（逐步废弃）
-  provider?: 'google';
+  // Legacy fields for backward compatibility with existing code
+  // These map to llm.provider, llm.apiKey, llm.model respectively
+  provider?: 'google';  // Only 'google' supported for legacy compatibility
   apiKey?: string;
   model?: string;
-  // 工具配置
+  // Tool configuration
   toolMode?: ToolMode;
   composioApiKey?: string;
 }
