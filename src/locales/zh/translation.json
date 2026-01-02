@@ -63,5 +63,64 @@
     "apiKeyRequired": "请先配置 API Key",
     "connectionFailed": "连接失败",
     "networkError": "网络错误"
+  },
+  "sources": {
+    "title": "信息源",
+    "add": "添加",
+    "search": "搜索信息源...",
+    "empty": "暂无信息源",
+    "emptyDesc": "点击上方「添加」按钮添加你的第一个 RSS 源",
+    "form": {
+      "title": "添加信息源",
+      "editTitle": "编辑信息源",
+      "name": "名称",
+      "namePlaceholder": "如：Hacker News",
+      "url": "RSS URL",
+      "urlPlaceholder": "https://example.com/feed.xml",
+      "schedule": "刷新频率",
+      "enabled": "启用",
+      "save": "保存",
+      "cancel": "取消",
+      "delete": "删除",
+      "deleteConfirm": "确定要删除这个信息源吗？"
+    },
+    "schedule": {
+      "15m": "每 15 分钟",
+      "30m": "每 30 分钟",
+      "1h": "每小时",
+      "6h": "每 6 小时",
+      "1d": "每天"
+    },
+    "card": {
+      "lastFetch": "上次抓取",
+      "never": "从未",
+      "ago": "前",
+      "newArticles": "篇新文章",
+      "refresh": "立即刷新",
+      "edit": "编辑",
+      "disable": "禁用",
+      "enable": "启用",
+      "delete": "删除"
+    }
+  },
+  "articles": {
+    "title": "文章",
+    "search": "搜索文章...",
+    "empty": "暂无文章",
+    "emptyDesc": "添加信息源后，文章会自动抓取显示在这里",
+    "all": "全部",
+    "unread": "未读",
+    "favorites": "收藏",
+    "markRead": "标记已读",
+    "markUnread": "标记未读",
+    "favorite": "收藏",
+    "unfavorite": "取消收藏",
+    "openLink": "打开原文"
+  },
+  "common": {
+    "back": "返回",
+    "loading": "加载中...",
+    "error": "出错了",
+    "retry": "重试"
   }
 }

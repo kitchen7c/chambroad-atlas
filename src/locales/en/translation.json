@@ -63,5 +63,64 @@
     "apiKeyRequired": "Please configure your API key first",
     "connectionFailed": "Connection failed",
     "networkError": "Network error"
+  },
+  "sources": {
+    "title": "Sources",
+    "add": "Add",
+    "search": "Search sources...",
+    "empty": "No sources yet",
+    "emptyDesc": "Click the Add button above to add your first RSS source",
+    "form": {
+      "title": "Add Source",
+      "editTitle": "Edit Source",
+      "name": "Name",
+      "namePlaceholder": "e.g., Hacker News",
+      "url": "RSS URL",
+      "urlPlaceholder": "https://example.com/feed.xml",
+      "schedule": "Refresh Interval",
+      "enabled": "Enabled",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this source?"
+    },
+    "schedule": {
+      "15m": "Every 15 minutes",
+      "30m": "Every 30 minutes",
+      "1h": "Every hour",
+      "6h": "Every 6 hours",
+      "1d": "Every day"
+    },
+    "card": {
+      "lastFetch": "Last fetch",
+      "never": "Never",
+      "ago": "ago",
+      "newArticles": "new articles",
+      "refresh": "Refresh now",
+      "edit": "Edit",
+      "disable": "Disable",
+      "enable": "Enable",
+      "delete": "Delete"
+    }
+  },
+  "articles": {
+    "title": "Articles",
+    "search": "Search articles...",
+    "empty": "No articles yet",
+    "emptyDesc": "Articles will appear here after adding sources",
+    "all": "All",
+    "unread": "Unread",
+    "favorites": "Favorites",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "favorite": "Favorite",
+    "unfavorite": "Unfavorite",
+    "openLink": "Open original"
+  },
+  "common": {
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry"
   }
 }
