@@ -115,7 +115,18 @@
     "markUnread": "Mark as unread",
     "favorite": "Favorite",
     "unfavorite": "Unfavorite",
-    "openLink": "Open original"
+    "openLink": "Open original",
+    "ai": {
+      "summary": "AI Summary",
+      "score": "Importance",
+      "tags": "Tags",
+      "process": "AI Process",
+      "processing": "Processing...",
+      "processed": "Processed",
+      "notProcessed": "Not processed",
+      "filtered": "Filtered",
+      "filterReason": "Filter reason"
+    }
   },
   "common": {
     "back": "Back",

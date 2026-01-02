@@ -18,15 +18,41 @@ export function ArticleCard({ article, source, onClick }: ArticleCardProps) {
     return `${days} d`;
   };
 
+  const parseTags = (): string[] => {
+    if (!article.tags) return [];
+    try {
+      return JSON.parse(article.tags);
+    } catch {
+      return [];
+    }
+  };
+
+  const tags = parseTags();
+  const isProcessed = article.processedAt > 0;
+  const isFiltered = article.filtered === 1;
+
   return (
-    <div className={`article-card ${article.isRead ? 'read' : ''}`} onClick={onClick}>
+    <div className={`article-card ${article.isRead ? 'read' : ''} ${isFiltered ? 'filtered' : ''}`} onClick={onClick}>
       <div className="article-card-title">
         {article.title}
         <span className="article-card-indicators">
           {!article.isRead && <span className="unread-dot">●</span>}
           {article.isFavorite && <span className="favorite-star">★</span>}
+          {isProcessed && article.score !== undefined && (
+            <span className={`article-score score-${Math.floor(article.score / 3)}`}>
+              {article.score}
+            </span>
+          )}
         </span>
       </div>
+      {tags.length > 0 && (
+        <div className="article-card-tags">
+          {tags.slice(0, 3).map((tag, i) => (
+            <span key={i} className="article-tag">{tag}</span>
+          ))}
+          {tags.length > 3 && <span className="article-tag-more">+{tags.length - 3}</span>}
+        </div>
+      )}
       <div className="article-card-meta">
         <span>{source?.name || 'Unknown'}</span>
         <span>·</span>

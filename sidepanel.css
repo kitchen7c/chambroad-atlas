@@ -980,3 +980,186 @@ body {
   text-align: center;
   color: #666666;
 }
+
+/* ===== AI Processing Elements ===== */
+
+/* Article Card Tags */
+.article-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.article-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #333333;
+  border-radius: 10px;
+  font-size: 11px;
+  color: #aaaaaa;
+}
+
+.article-tag-more {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #666666;
+}
+
+/* Article Card Score Badge */
+.article-score {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+}
+
+.article-score.score-0 {
+  background: #4a4a4a;
+  color: #888888;
+}
+
+.article-score.score-1 {
+  background: #3b5998;
+  color: #ffffff;
+}
+
+.article-score.score-2 {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.article-score.score-3 {
+  background: #f59e0b;
+  color: #000000;
+}
+
+/* Filtered Article Style */
+.article-card.filtered {
+  opacity: 0.5;
+  border-left: 3px solid #ef4444;
+}
+
+/* Article Detail Tags */
+.article-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.article-tags .article-tag {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* Article Score Badge in Detail */
+.article-score-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.article-score-badge.score-0 {
+  background: #4a4a4a;
+  color: #888888;
+}
+
+.article-score-badge.score-1 {
+  background: #3b5998;
+  color: #ffffff;
+}
+
+.article-score-badge.score-2 {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.article-score-badge.score-3 {
+  background: #f59e0b;
+  color: #000000;
+}
+
+/* Process Button */
+.action-btn.process-btn {
+  color: #2563eb;
+}
+
+.action-btn.process-btn:hover {
+  color: #3b82f6;
+}
+
+.action-btn.process-btn:disabled {
+  color: #666666;
+  cursor: not-allowed;
+}
+
+/* AI Summary Section */
+.article-summary-section {
+  background: #262626;
+  border-radius: 8px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+.article-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.article-summary-header:hover {
+  background: #333333;
+}
+
+.summary-icon {
+  font-size: 16px;
+}
+
+.summary-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.summary-toggle {
+  font-size: 10px;
+  color: #888888;
+}
+
+.article-summary-content {
+  padding: 0 14px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #cccccc;
+  border-top: 1px solid #333333;
+  padding-top: 12px;
+}
+
+/* Filtered Notice */
+.article-filtered-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  margin: 12px 0;
+  font-size: 13px;
+  color: #ef4444;
+}
+
+.filtered-icon {
+  font-size: 14px;
+}

@@ -115,7 +115,18 @@
     "markUnread": "标记未读",
     "favorite": "收藏",
     "unfavorite": "取消收藏",
-    "openLink": "打开原文"
+    "openLink": "打开原文",
+    "ai": {
+      "summary": "AI 摘要",
+      "score": "重要性",
+      "tags": "标签",
+      "process": "AI 处理",
+      "processing": "处理中...",
+      "processed": "已处理",
+      "notProcessed": "未处理",
+      "filtered": "已过滤",
+      "filterReason": "过滤原因"
+    }
   },
   "common": {
     "back": "返回",

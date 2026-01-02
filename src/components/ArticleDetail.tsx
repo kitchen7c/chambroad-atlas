@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { db, type StoredArticle, type StoredSource } from '../core/storage/db';
+import { ProcessorJob } from '../core/jobs/processor-job';
 
 interface ArticleDetailProps {
   articleId: string;
@@ -13,6 +14,8 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
   const { t } = useTranslation();
   const [article, setArticle] = useState<StoredArticle | null>(null);
   const [source, setSource] = useState<StoredSource | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showSummary, setShowSummary] = useState(true);
 
   useEffect(() => {
     const loadArticle = async () => {
@@ -45,8 +48,45 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
     }
   };
 
+  const processArticle = async () => {
+    if (!article || isProcessing) return;
+    setIsProcessing(true);
+    try {
+      const job = new ProcessorJob({
+        batchSize: 1,
+        intervalMs: 0,
+        defaultPipeline: {
+          processors: [
+            { type: 'summarizer', config: { enabled: true, options: {} } },
+            { type: 'classifier', config: { enabled: true, options: {} } },
+            { type: 'scorer', config: { enabled: true, options: {} } },
+          ],
+        },
+      });
+      const result = await job.processOne(articleId);
+      if (result) {
+        // Reload article to get updated data
+        const updated = await db.articles.get(articleId);
+        if (updated) setArticle(updated);
+      }
+    } catch (error) {
+      console.error('Failed to process article:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString();
+  };
+
+  const parseTags = (): string[] => {
+    if (!article?.tags) return [];
+    try {
+      return JSON.parse(article.tags);
+    } catch {
+      return [];
+    }
   };
 
   if (!article) {
@@ -60,11 +100,23 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
     );
   }
 
+  const tags = parseTags();
+  const isProcessed = article.processedAt > 0;
+  const isFiltered = article.filtered === 1;
+
   return (
     <div className="article-detail">
       <div className="article-detail-header">
         <button className="view-header-back" onClick={onBack}>←</button>
         <div className="article-detail-actions">
+          <button
+            className="action-btn process-btn"
+            onClick={processArticle}
+            disabled={isProcessing}
+            title={isProcessed ? t('articles.ai.processed') : t('articles.ai.process')}
+          >
+            {isProcessing ? '⏳' : isProcessed ? '✓' : '⚡'}
+          </button>
           <button
             className={`action-btn ${article.isFavorite ? 'active' : ''}`}
             onClick={toggleFavorite}
@@ -93,7 +145,49 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
           )}
           <span>·</span>
           <span>{formatDate(article.publishedAt)}</span>
+          {isProcessed && article.score !== undefined && (
+            <>
+              <span>·</span>
+              <span className={`article-score-badge score-${Math.floor(article.score / 3)}`}>
+                {t('articles.ai.score')}: {article.score}
+              </span>
+            </>
+          )}
         </div>
+
+        {tags.length > 0 && (
+          <div className="article-tags">
+            {tags.map((tag, i) => (
+              <span key={i} className="article-tag">{tag}</span>
+            ))}
+          </div>
+        )}
+
+        {isFiltered && article.filterReason && (
+          <div className="article-filtered-notice">
+            <span className="filtered-icon">⚠</span>
+            <span>{t('articles.ai.filtered')}: {article.filterReason}</span>
+          </div>
+        )}
+
+        {article.summary && (
+          <div className="article-summary-section">
+            <div
+              className="article-summary-header"
+              onClick={() => setShowSummary(!showSummary)}
+            >
+              <span className="summary-icon">🤖</span>
+              <span className="summary-title">{t('articles.ai.summary')}</span>
+              <span className="summary-toggle">{showSummary ? '▼' : '▶'}</span>
+            </div>
+            {showSummary && (
+              <div className="article-summary-content">
+                {article.summary}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="article-body">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {article.content}
