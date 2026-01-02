@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LLMConfig, LLMProvider } from '../../types';
 import { LLM_PROVIDER_PRESETS } from '../../types';
 
@@ -9,6 +10,7 @@ interface LLMSettingsProps {
 }
 
 export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsProps) {
+  const { t } = useTranslation();
   const [showApiKey, setShowApiKey] = useState(false);
   const [isCustom, setIsCustom] = useState(config?.provider === 'custom');
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -84,25 +86,25 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
 
   return (
     <div className="llm-settings">
-      <h3>🤖 LLM Configuration</h3>
+      <h3>🤖 {t('settings.llm.title')}</h3>
 
       <div className="setting-group">
-        <label htmlFor="llm-provider">Provider</label>
+        <label htmlFor="llm-provider">{t('settings.llm.provider')}</label>
         <select
           id="llm-provider"
           value={currentConfig.provider}
           onChange={(e) => handleProviderChange(e.target.value as LLMProvider)}
         >
-          <option value="google">Google Gemini</option>
-          <option value="openai">OpenAI</option>
-          <option value="anthropic">Anthropic Claude</option>
-          <option value="ollama">Ollama (Local)</option>
-          <option value="custom">Custom API</option>
+          <option value="google">{t('providers.google')}</option>
+          <option value="openai">{t('providers.openai')}</option>
+          <option value="anthropic">{t('providers.anthropic')}</option>
+          <option value="ollama">{t('providers.ollama')}</option>
+          <option value="custom">{t('providers.custom')}</option>
         </select>
       </div>
 
       <div className="setting-group">
-        <label htmlFor="llm-baseurl">Base URL</label>
+        <label htmlFor="llm-baseurl">{t('settings.llm.baseUrl')}</label>
         <input
           id="llm-baseurl"
           type="text"
@@ -117,7 +119,7 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
       </div>
 
       <div className="setting-group">
-        <label htmlFor="llm-apikey">API Key</label>
+        <label htmlFor="llm-apikey">{t('settings.llm.apiKey')}</label>
         <div className="api-key-input-wrapper">
           <input
             id="llm-apikey"
@@ -138,7 +140,7 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
       </div>
 
       <div className="setting-group">
-        <label htmlFor="llm-model">Model</label>
+        <label htmlFor="llm-model">{t('settings.llm.model')}</label>
         {isCustom ? (
           <input
             id="llm-model"
@@ -161,9 +163,9 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
       </div>
 
       <details className="advanced-options">
-        <summary>Advanced Options</summary>
+        <summary>{t('settings.llm.advancedOptions')}</summary>
         <div className="setting-group">
-          <label htmlFor="llm-temperature">Temperature</label>
+          <label htmlFor="llm-temperature">{t('settings.llm.temperature')}</label>
           <input
             id="llm-temperature"
             type="number"
@@ -183,7 +185,7 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
           />
         </div>
         <div className="setting-group">
-          <label htmlFor="llm-max-tokens">Max Tokens</label>
+          <label htmlFor="llm-max-tokens">{t('settings.llm.maxTokens')}</label>
           <input
             id="llm-max-tokens"
             type="number"
@@ -201,7 +203,7 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
           />
         </div>
         <div className="setting-group">
-          <label htmlFor="llm-timeout">Timeout (seconds)</label>
+          <label htmlFor="llm-timeout">{t('settings.llm.timeout')}</label>
           <input
             id="llm-timeout"
             type="number"
@@ -227,9 +229,9 @@ export function LLMSettings({ config, onChange, onTestConnection }: LLMSettingsP
             disabled={testStatus === 'testing' || !currentConfig.apiKey}
             className={`test-button ${testStatus}`}
           >
-            {testStatus === 'testing' ? 'Testing...' :
-             testStatus === 'success' ? '✓ Connected' :
-             testStatus === 'error' ? '✗ Failed' : 'Test Connection'}
+            {testStatus === 'testing' ? t('settings.llm.testing') :
+             testStatus === 'success' ? `✓ ${t('settings.llm.connected')}` :
+             testStatus === 'error' ? `✗ ${t('settings.llm.failed')}` : t('settings.llm.testConnection')}
           </button>
           {testError && <p className="error-text">{testError}</p>}
         </div>

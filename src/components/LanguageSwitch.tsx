@@ -16,11 +16,11 @@ export function LanguageSwitch() {
     });
   }, []);
 
-  const handleChange = (value: 'auto' | 'zh' | 'en') => {
+  const handleChange = async (value: 'auto' | 'zh' | 'en') => {
     setPreference(value);
     if (value === 'auto') {
       const systemLang = detectLanguage();
-      i18n.changeLanguage(systemLang);
+      await i18n.changeLanguage(systemLang);
       // Clear saved preference
       if (typeof chrome !== 'undefined' && chrome.storage?.local) {
         chrome.storage.local.remove(['atlasLanguage']);
@@ -28,7 +28,7 @@ export function LanguageSwitch() {
         localStorage.removeItem('atlasLanguage');
       }
     } else {
-      changeLanguage(value);
+      await changeLanguage(value);
     }
   };
 
