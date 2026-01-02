@@ -1,12 +1,60 @@
 // Shared types for the extension
 import { z } from 'zod';
 
+// ============================================
+// LLM Configuration Types
+// ============================================
+
+export type LLMProvider = 'google' | 'openai' | 'anthropic' | 'ollama' | 'custom';
+
+export interface LLMOptions {
+  temperature?: number;
+  maxTokens?: number;
+  timeout?: number;
+  headers?: Record<string, string>;
+}
+
+export interface LLMConfig {
+  provider: LLMProvider;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  options?: LLMOptions;
+}
+
+export const LLM_PROVIDER_PRESETS: Record<Exclude<LLMProvider, 'custom'>, { baseUrl: string; defaultModel: string; models: string[] }> = {
+  google: {
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    defaultModel: 'gemini-2.0-flash-exp',
+    models: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash-exp'],
+  },
+  openai: {
+    baseUrl: 'https://api.openai.com/v1',
+    defaultModel: 'gpt-4-turbo',
+    models: ['gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
+  },
+  anthropic: {
+    baseUrl: 'https://api.anthropic.com/v1',
+    defaultModel: 'claude-3-opus-20240229',
+    models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
+  },
+  ollama: {
+    baseUrl: 'http://localhost:11434/v1',
+    defaultModel: 'llama3',
+    models: ['llama3', 'llama2', 'mistral', 'codellama'],
+  },
+};
+
 export type ToolMode = 'tool-router';
 
 export interface Settings {
-  provider: 'google';
-  apiKey: string;
-  model: string;
+  // LLM 配置
+  llm: LLMConfig;
+  // 兼容旧字段（逐步废弃）
+  provider?: 'google';
+  apiKey?: string;
+  model?: string;
+  // 工具配置
   toolMode?: ToolMode;
   composioApiKey?: string;
 }
@@ -267,4 +315,29 @@ export const ScreenshotResponseSchema = z.object({
   success: z.boolean(),
   error: z.string().optional(),
   screenshot: z.string().optional(), // data URL
+});
+
+// ============================================
+// LLM Configuration Validation Schemas
+// ============================================
+
+export const LLMOptionsSchema = z.object({
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().positive().optional(),
+  timeout: z.number().positive().optional(),
+  headers: z.record(z.string()).optional(),
+});
+
+export const LLMConfigSchema = z.object({
+  provider: z.enum(['google', 'openai', 'anthropic', 'ollama', 'custom']),
+  baseUrl: z.string().url(),
+  apiKey: z.string(),
+  model: z.string().min(1),
+  options: LLMOptionsSchema.optional(),
+});
+
+export const SettingsSchemaV2 = z.object({
+  llm: LLMConfigSchema,
+  toolMode: z.enum(['tool-router']).optional(),
+  composioApiKey: z.string().optional(),
 });
