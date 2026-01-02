@@ -31,11 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCurrentUrl: () => ipcRenderer.invoke('get-current-url'),
   executeScript: (script: string) => ipcRenderer.invoke('execute-script', script),
 
-  // Composio MCP
-  initializeMcp: (apiKey: string) => ipcRenderer.invoke('initialize-mcp', apiKey),
-  getMcpTools: () => ipcRenderer.invoke('get-mcp-tools'),
-
-  // Chat with tools (AI SDK) - uses events for streaming
+  // Chat - uses events for streaming
   streamChatWithTools: (
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }>,
@@ -173,8 +169,6 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   getCurrentUrl: () => Promise<{ url: string; title: string }>;
   executeScript: (script: string) => Promise<{ success: boolean; result?: any; error?: string }>;
-  initializeMcp: (apiKey: string) => Promise<{ success: boolean; sessionId?: string; toolCount?: number; error?: string }>;
-  getMcpTools: () => Promise<{ success: boolean; tools?: Record<string, any>; error?: string }>;
   streamChatWithTools: (
     userInput: string,
     conversationHistory: Array<{ role: string; content: string }>,

@@ -36,11 +36,6 @@
       "maxTokens": "最大 Token 数",
       "timeout": "超时时间（秒）"
     },
-    "composio": {
-      "title": "Composio API Key",
-      "placeholder": "输入你的 Composio API key（可选）",
-      "help": "启用 Composio Tool Router 以访问 500+ 应用集成"
-    },
     "language": {
       "title": "语言",
       "auto": "跟随系统",

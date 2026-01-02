@@ -2,18 +2,19 @@
 
 # Chambroad Atlas
 
-AI-powered browser automation tool with intelligent tool routing.
+AI-powered browser automation tool with intelligent capabilities.
 
 </div>
 
 ## Features
 
-- **Tool Router Mode**: Composio's intelligent tool routing for accessing Gmail, Slack, GitHub, and 500+ integrations
 - **Browser Tools Mode**: Gemini 2.5 Computer Use for visual browser automation with screenshots, clicks, typing, scrolling, and navigation
+- **Multi-Provider LLM Support**: Configure Google Gemini, OpenAI, Anthropic Claude, Ollama, or custom API endpoints
 - **Sidebar Chat Interface**: Clean, modern React-based chat UI accessible from any tab
 - **Direct Browser Automation**: No backend required - all API calls made directly from extension
 - **Visual Feedback**: Blue click indicators and element highlighting during automation
 - **Safety Features**: Confirmation dialogs for sensitive actions (checkout, payment, etc.)
+- **Multi-language Support**: Chinese and English with auto-detection
 
 ## Getting Started
 
@@ -21,8 +22,7 @@ AI-powered browser automation tool with intelligent tool routing.
 
 - Node.js 18+ and npm
 - Chrome or Edge browser (Manifest V3 support)
-- Google API key for Gemini (required)
-- Composio API key (optional, for Tool Router mode)
+- Google API key for Gemini (or other supported LLM provider)
 
 ### Installation
 
@@ -67,17 +67,28 @@ npm run dev
 
 ### Configuration
 
-#### Required Setup
+#### LLM Setup
 
-1. **Google API Key** (Required)
+Open Settings (⚙️ icon) to configure your LLM provider:
+
+1. **Google Gemini** (Default)
    - Get your key from [Google AI Studio](https://aistudio.google.com/app/apikey)
-   - Add it in Settings under "Google API Key"
    - Supports: Gemini 2.5 Pro, Flash, and Flash Lite
 
-2. **Composio API Key** (Optional - for Tool Router mode)
-   - Get your key from [Composio Dashboard](https://app.composio.dev/settings)
-   - Add it in Settings under "Composio API Key"
-   - Enables access to 500+ app integrations
+2. **OpenAI**
+   - Get your key from [OpenAI Dashboard](https://platform.openai.com/api-keys)
+   - Supports: GPT-4 Turbo, GPT-4o, GPT-3.5 Turbo
+
+3. **Anthropic Claude**
+   - Get your key from [Anthropic Console](https://console.anthropic.com/)
+   - Supports: Claude 3 Opus, Sonnet, Haiku
+
+4. **Ollama (Local)**
+   - Run locally at http://localhost:11434
+   - Supports: Llama 3, Mistral, CodeLlama, etc.
+
+5. **Custom API**
+   - Configure any OpenAI-compatible API endpoint
 
 ### Development
 

@@ -4,9 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { initI18n } from './src/i18n';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { Settings, MCPClient, Message } from './types';
+import type { Settings, Message } from './types';
 import { GeminiResponseSchema } from './types';
-import { experimental_createMCPClient, stepCountIs } from 'ai';
 
 // Custom component to handle link clicks - opens in new tab
 const LinkComponent = ({ href, children }: { href?: string; children?: React.ReactNode }) => {
@@ -83,12 +82,7 @@ function ChatSidebar() {
   const [showBrowserToolsWarning, setShowBrowserToolsWarning] = useState(false);
   const [isUserScrolled, setIsUserScrolled] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const mcpClientRef = useRef<MCPClient | null>(null);
-  const mcpToolsRef = useRef<Record<string, unknown> | null>(null);
   const listenerAttachedRef = useRef(false);
-  const settingsHashRef = useRef('');
-  const mcpInitPromiseRef = useRef<Promise<void> | null>(null);
-  const composioSessionRef = useRef<{ expiresAt: number } | null>(null);
 
   const executeTool = async (toolName: string, parameters: any, retryCount = 0): Promise<any> => {
     const MAX_RETRIES = 3;
@@ -186,34 +180,10 @@ function ChatSidebar() {
     });
   };
 
-  const loadSettings = async (forceRefresh = false) => {
+  const loadSettings = async () => {
     chrome.storage.local.get(['atlasSettings'], async (result) => {
       if (result.atlasSettings) {
         setSettings(result.atlasSettings);
-
-        const settingsHash = JSON.stringify(result.atlasSettings);
-        const hasSettingsChanged = forceRefresh || settingsHash !== settingsHashRef.current;
-
-        if (hasSettingsChanged && result.atlasSettings.composioApiKey) {
-          settingsHashRef.current = settingsHash;
-
-          try {
-            const { initializeComposioToolRouter } = await import('./tools');
-            const toolRouterSession = await initializeComposioToolRouter(
-              result.atlasSettings.composioApiKey
-            );
-
-            composioSessionRef.current = { expiresAt: toolRouterSession.expiresAt };
-
-            chrome.storage.local.set({
-              composioSessionId: toolRouterSession.sessionId,
-              composioChatMcpUrl: toolRouterSession.chatSessionMcpUrl,
-              composioToolRouterMcpUrl: toolRouterSession.toolRouterMcpUrl,
-            });
-          } catch (error) {
-            console.error('Failed to initialize Composio:', error);
-          }
-        }
       } else {
         setShowSettings(true);
       }
@@ -246,11 +216,6 @@ function ChatSidebar() {
 
   const openSettings = () => {
     chrome.runtime.openOptionsPage();
-  };
-
-  const isComposioSessionExpired = (): boolean => {
-    if (!composioSessionRef.current) return true;
-    return Date.now() > composioSessionRef.current.expiresAt;
   };
 
   const ensureApiKey = (): string => {
@@ -294,16 +259,6 @@ function ChatSidebar() {
     setBrowserToolsEnabled(newValue);
 
     if (newValue) {
-      // Clear MCP cache when enabling browser tools
-      if (mcpClientRef.current) {
-        try {
-          await mcpClientRef.current.close();
-        } catch (error) {
-          console.error('Error closing MCP client:', error);
-        }
-      }
-      mcpClientRef.current = null;
-      mcpToolsRef.current = null;
       setShowBrowserToolsWarning(false);
     }
   };
@@ -320,41 +275,6 @@ function ChatSidebar() {
     setMessages([]);
     setInput('');
     setShowBrowserToolsWarning(false);
-    
-    // Force close and clear ALL cached state
-    if (mcpClientRef.current) {
-      try {
-        await mcpClientRef.current.close();
-        console.log('Closed previous MCP client');
-      } catch (error) {
-        console.error('Error closing MCP client:', error);
-      }
-    }
-    mcpClientRef.current = null;
-    mcpToolsRef.current = null;
-    
-    
-    // Reinitialize Composio session if API key present
-    if (settings?.composioApiKey) {
-      try {
-        const { initializeComposioToolRouter } = await import('./tools');
-        // Use unique, persistent user ID
-        const toolRouterSession = await initializeComposioToolRouter(
-          settings.composioApiKey
-        );
-        
-        chrome.storage.local.set({ 
-          composioSessionId: toolRouterSession.sessionId,
-          composioChatMcpUrl: toolRouterSession.chatSessionMcpUrl,
-          composioToolRouterMcpUrl: toolRouterSession.toolRouterMcpUrl,
-        });
-        
-        console.log('New Composio session created');
-        console.log('Session ID:', toolRouterSession.sessionId);
-      } catch (error) {
-        console.error('Failed to create new Composio session:', error);
-      }
-    }
   };
 
   const streamWithGeminiComputerUse = async (messages: Message[]) => {
@@ -998,95 +918,6 @@ GUIDELINES:
     }
   };
 
-  // Stream with AI SDK using MCP tools
-  const streamWithAISDKAndMCP = async (messages: Message[], tools: any) => {
-    try {
-      // Import streamText and provider SDKs
-      const { streamText } = await import('ai');
-      const { z } = await import('zod');
-
-      // Import the appropriate provider SDK (only Google is supported)
-      const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
-      const googleClient = createGoogleGenerativeAI({ apiKey: settings!.apiKey });
-      const model = googleClient(settings!.model);
-
-      // Convert messages to AI SDK format
-      const aiMessages = messages.map(m => ({
-        role: m.role,
-        content: m.content
-      }));
-
-      // Define browser history tool
-      const browserHistoryTool = {
-        getBrowserHistory: {
-          description: 'Get browser history. Useful for finding recently visited pages.',
-          parameters: z.object({
-            query: z.string().optional().describe('Search term to filter history (e.g., "github", "reddit")'),
-            maxResults: z.number().optional().describe('Maximum number of results (default: 20)'),
-            daysBack: z.number().optional().describe('How many days back to search (default: 7)'),
-          }),
-          execute: async ({ query = '', maxResults = 20, daysBack = 7 }: { query?: string; maxResults?: number; daysBack?: number }) => {
-            const startTime = Date.now() - (daysBack * 24 * 60 * 60 * 1000);
-            const result = await executeTool('getBrowserHistory', { query, maxResults, startTime });
-            
-            // Format the history results for better readability
-            if (result && result.history && Array.isArray(result.history)) {
-              const formatted = result.history.map((item: any) => {
-                const lastVisit = item.lastVisitTime ? new Date(item.lastVisitTime).toLocaleString() : 'Unknown';
-                return `• **${item.title || 'Untitled'}**\n  ${item.url}\n  Last visited: ${lastVisit}`;
-              }).join('\n\n');
-              
-              return `Found ${result.history.length} recent pages:\n\n${formatted}`;
-            }
-            
-            return result;
-          },
-        },
-      };
-
-      // Merge MCP tools with browser history tool
-      const allTools = {
-        ...tools,
-        ...browserHistoryTool,
-      };
-
-        const result = streamText({
-          model,
-          tools: allTools,
-          messages: aiMessages,
-          stopWhen: stepCountIs(20),
-          abortSignal: abortControllerRef.current?.signal,
-        });
-
-      // Add initial assistant message
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: '',
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-
-      // Stream the response - collect full text without duplicates
-      let fullText = '';
-      for await (const chunk of result.textStream) {
-        fullText += chunk;
-        setMessages(prev => {
-          const updated = [...prev];
-          const lastMsg = updated[updated.length - 1];
-          if (lastMsg && lastMsg.role === 'assistant') {
-            // Only update if we've accumulated new text
-            lastMsg.content = fullText;
-          }
-          return updated;
-        });
-      }
-
-    } catch (error) {
-      console.error('❌ Error streaming with AI SDK:', error);
-      throw error;
-    }
-  };
-
   const streamGoogle = async (messages: Message[], signal: AbortSignal) => {
     // Ensure API credentials are available
     const apiKey = ensureApiKey();
@@ -1229,85 +1060,11 @@ GUIDELINES:
           return;
         }
 
-        if (mcpClientRef.current) {
-          try {
-            await mcpClientRef.current.close();
-          } catch (e) {
-            // Silent fail
-          }
-          mcpClientRef.current = null;
-          mcpToolsRef.current = null;
-        }
-
         await streamWithGeminiComputerUse(newMessages);
-      } else if (settings.composioApiKey) {
-        if (isComposioSessionExpired()) {
-          console.warn('Composio session expired, reinitializing...');
-          await loadSettings(true);
-        }
-
-        const isComputerUseModel = settings.model === 'gemini-2.5-computer-use-preview-10-2025';
-        if (isComputerUseModel && settings.provider === 'google') {
-          setSettings({ ...settings, model: 'gemini-2.5-pro' });
-          console.warn('Switching to gemini-2.5-pro (incompatible with MCP)');
-        }
-
-        if (mcpClientRef.current && mcpToolsRef.current) {
-          await streamWithAISDKAndMCP(newMessages, mcpToolsRef.current);
-        } else if (mcpInitPromiseRef.current) {
-          await mcpInitPromiseRef.current;
-          if (mcpClientRef.current && mcpToolsRef.current) {
-            await streamWithAISDKAndMCP(newMessages, mcpToolsRef.current);
-          } else {
-            await streamGoogle(newMessages, abortControllerRef.current.signal);
-          }
-        } else {
-          mcpInitPromiseRef.current = (async () => {
-            try {
-              const storage = await chrome.storage.local.get(['composioToolRouterMcpUrl', 'composioSessionId', 'atlasSettings']);
-              if (!storage.composioToolRouterMcpUrl || !storage.composioSessionId) return;
-
-              const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
-              const composioApiKey = storage.atlasSettings?.composioApiKey;
-
-              const transportOptions: any = { sessionId: storage.composioSessionId };
-              if (composioApiKey) {
-                transportOptions.headers = { 'x-api-key': composioApiKey };
-              }
-
-              const mcpClient = await experimental_createMCPClient({
-                transport: new StreamableHTTPClientTransport(
-                  new URL(storage.composioToolRouterMcpUrl),
-                  transportOptions
-                ),
-              });
-
-              const mcpTools = await mcpClient.tools();
-              if (Object.keys(mcpTools).length > 0) {
-                mcpClientRef.current = mcpClient;
-                mcpToolsRef.current = mcpTools;
-              } else {
-                await mcpClient.close();
-              }
-            } catch (error) {
-              console.error('MCP init failed:', error);
-            } finally {
-              mcpInitPromiseRef.current = null;
-            }
-          })();
-
-          await mcpInitPromiseRef.current;
-
-          if (mcpClientRef.current && mcpToolsRef.current) {
-            await streamWithAISDKAndMCP(newMessages, mcpToolsRef.current);
-          } else {
-            await streamGoogle(newMessages, abortControllerRef.current.signal);
-          }
-        }
       } else {
         await streamGoogle(newMessages, abortControllerRef.current.signal);
       }
-      
+
       setIsLoading(false);
     } catch (error: any) {
       console.error('❌ Chat error occurred:');

@@ -1,37 +1,22 @@
 import { ipcMain } from 'electron';
 import { BrowserManager } from './browser-manager';
 import type Store from 'electron-store';
-import { experimental_createMCPClient } from '@ai-sdk/mcp';
-import { stepCountIs, streamText, ToolSet } from 'ai';
+import { streamText } from 'ai';
 import { google } from '@ai-sdk/google';
 import { ComputerUseService } from './computer-use-service';
-import { randomUUID } from 'crypto';
-
-// Store for MCP state in main process
-interface MCPState {
-  sessionId?: string;
-  mcpUrl?: string;
-  tools?: Record<string, Record<string, unknown>>;
-}
-
-const mcpState: MCPState = {};
 
 /**
- * Stream chat with Gemini and Composio tools
- * Runs in main process with Composio MCP tools integration
+ * Stream chat with Gemini
+ * Runs in main process
  * WARNING: Never store API keys in process.env - they can leak to child processes
  */
-async function streamChatWithToolsIpc(
+async function streamChatIpc(
   userInput: string,
   conversationHistory: Array<{ role: string; content: string }>,
   model: string,
   googleApiKey: string,
-  tools: ToolSet | undefined,
   onChunk: (chunk: string) => void
 ): Promise<void> {
-  // SECURITY: Pass API key directly to google() instead of storing in process.env
-  // This prevents accidental leakage to child processes or subprocess access
-
   // Build messages - filter out empty content
   const validHistory = conversationHistory.filter(msg => msg.content && msg.content.trim());
   const messages = [
@@ -42,7 +27,6 @@ async function streamChatWithToolsIpc(
     },
   ];
 
-  // Stream with AI SDK
   // SECURITY: Temporarily set API key in process.env with strict cleanup to prevent leakage
   const originalApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
   process.env.GOOGLE_GENERATIVE_AI_API_KEY = googleApiKey;
@@ -51,8 +35,6 @@ async function streamChatWithToolsIpc(
     const result = streamText({
       model: google(model),
       messages: messages as any,
-      tools: tools,
-      stopWhen: stepCountIs(20),
     });
 
     // Process stream
@@ -65,26 +47,6 @@ async function streamChatWithToolsIpc(
             onChunk(JSON.stringify({ type: 'text', data: chunkObj.delta }));
           } else if ('text' in chunkObj) {
             onChunk(JSON.stringify({ type: 'text', data: chunkObj.text }));
-          }
-          break;
-
-        case 'tool-call':
-          if ('toolName' in chunkObj) {
-            onChunk(JSON.stringify({
-              type: 'tool-call',
-              toolName: chunkObj.toolName,
-              args: 'args' in chunkObj ? chunkObj.args : undefined
-            }));
-          }
-          break;
-
-        case 'tool-result':
-          if ('result' in chunkObj || 'output' in chunkObj) {
-            onChunk(JSON.stringify({
-              type: 'tool-result',
-              toolName: 'toolName' in chunkObj ? chunkObj.toolName : undefined,
-              data: ('result' in chunkObj) ? chunkObj.result : chunkObj.output
-            }));
           }
           break;
 
@@ -105,68 +67,6 @@ async function streamChatWithToolsIpc(
     } else {
       delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     }
-  }
-}
-
-/**
- * Initialize Composio Tool Router session and MCP client in the main process
- */
-async function initializeComposioMCP(apiKey: string): Promise<{
-  sessionId: string;
-  tools: Record<string, any>;
-  toolCount: number;
-}> {
-  try {
-    // Create Composio session
-    const userId = `atlas-${randomUUID()}`;
-    const sessionResponse = await fetch(
-      'https://backend.composio.dev/api/v3/labs/tool_router/session',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          user_id: userId,
-        }),
-      }
-    );
-
-    if (!sessionResponse.ok) {
-      const errorText = await sessionResponse.text();
-      throw new Error(
-        `Failed to create Composio session: ${sessionResponse.status} ${errorText}`
-      );
-    }
-
-    const sessionData = await sessionResponse.json();
-    const mcpUrl = sessionData.tool_router_instance_mcp_url;
-    const sessionId = sessionData.session_id;
-
-    // Create MCP client
-    const mcpClient = await experimental_createMCPClient({
-      transport: {
-        type: 'http',
-        url: mcpUrl,
-      },
-    });
-
-    // Fetch tools from MCP server
-    const tools = await mcpClient.tools();
-
-    // Store in state
-    mcpState.sessionId = sessionId;
-    mcpState.mcpUrl = mcpUrl;
-    mcpState.tools = tools;
-
-    return {
-      sessionId,
-      tools,
-      toolCount: Object.keys(tools).length,
-    };
-  } catch (error) {
-    throw error;
   }
 }
 
@@ -301,43 +201,10 @@ export function setupIpcHandlers(browserManager: BrowserManager, store: Store) {
     }
   });
 
-  // Composio MCP handlers
-  ipcMain.handle('initialize-mcp', async (_event, apiKey: string) => {
-    try {
-      const result = await initializeComposioMCP(apiKey);
-      return {
-        success: true,
-        sessionId: result.sessionId,
-        toolCount: result.toolCount,
-      };
-    } catch (error: any) {
-      console.error('[Main] IPC initialize-mcp error:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  });
+  // Store active streams (both computer use and chat) so we can abort them
+  const activeStreams = new Map<number, { active: boolean }>();
 
-  ipcMain.handle('get-mcp-tools', async () => {
-    try {
-      if (!mcpState.tools) {
-        throw new Error('MCP tools not initialized. Call initialize-mcp first.');
-      }
-      // Return tools as-is (they're used by streamText in main process, not for IPC)
-      return {
-        success: true,
-        tools: mcpState.tools,
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  });
-
-  // Stream chat with tools (using events for true streaming)
+  // Stream chat (using events for true streaming)
   ipcMain.on(
     'stream-chat-with-tools',
     async (event, userInput: string, conversationHistory: Array<{ role: string; content: string }>, model: string, googleApiKey: string) => {
@@ -346,15 +213,11 @@ export function setupIpcHandlers(browserManager: BrowserManager, store: Store) {
       activeStreams.set(streamId, streamState);
 
       try {
-        // Get tools from mcpState (don't pass through IPC - they're non-serializable)
-        const tools = mcpState.tools as ToolSet | undefined;
-
-        await streamChatWithToolsIpc(
+        await streamChatIpc(
           userInput,
           conversationHistory,
           model,
           googleApiKey,
-          tools,
           (chunk) => {
             // Check if stream was aborted
             if (!streamState.active) {
@@ -372,7 +235,7 @@ export function setupIpcHandlers(browserManager: BrowserManager, store: Store) {
       } catch (error: any) {
         // Don't send error if stream was aborted
         if (streamState.active) {
-          console.error('[Main] Error in stream-chat-with-tools:', error);
+          console.error('[Main] Error in stream-chat:', error);
           event.sender.send('stream-error', error.message);
         }
       } finally {
@@ -404,9 +267,6 @@ export function setupIpcHandlers(browserManager: BrowserManager, store: Store) {
       return { success: false, error: error.message };
     }
   });
-
-  // Store active streams (both computer use and chat) so we can abort them
-  const activeStreams = new Map<number, { active: boolean }>();
 
   // Stream with Gemini Computer Use
   ipcMain.on(

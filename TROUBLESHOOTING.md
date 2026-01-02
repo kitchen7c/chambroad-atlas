@@ -196,34 +196,7 @@ Before diving into specific issues, run through this checklist:
 
 ---
 
-### 6. Tool Router Not Working
-
-**Symptoms:**
-- Composio API key is configured
-- AI responds but doesn't use tools
-- "Tool not found" errors
-
-**Solutions:**
-
-#### A. Verify API Key
-1. Check Composio API key is correct
-2. Key should start with specific prefix (check Composio dashboard)
-3. Ensure no extra spaces when pasting
-
-#### B. Check Tool Availability
-1. Some tools require additional OAuth authentication
-2. Visit [Composio Dashboard](https://app.composio.dev/)
-3. Check "Connected Apps" section
-4. Authenticate the apps you want to use (Gmail, Slack, etc.)
-
-#### C. Session Refresh
-1. Click "New Chat" to reset session
-2. This refreshes available tools from Composio
-3. Try your request again
-
----
-
-### 7. Clicking / Typing Actions Not Working (Browser Tools)
+### 6. Clicking / Typing Actions Not Working (Browser Tools)
 
 **Symptoms:**
 - AI says it's clicking but nothing happens
@@ -294,7 +267,6 @@ Before diving into specific issues, run through this checklist:
 - May block streaming APIs
 - Contact IT department for whitelist:
   - `generativelanguage.googleapis.com`
-  - `api.composio.dev`
 
 ---
 
@@ -303,7 +275,7 @@ Before diving into specific issues, run through this checklist:
 ### Enable Detailed Logging
 
 1. Open browser console (F12)
-2. Look for messages prefixed with `[Atlas]` or `[Composio]`
+2. Look for messages prefixed with `[Atlas]`
 3. Errors will show in red
 4. Network requests visible in Network tab
 
@@ -326,14 +298,6 @@ curl -H "Content-Type: application/json" \
 
 Expected: JSON response with AI-generated text
 If fails: API key or network issue
-
-### MCP Connection Debugging
-
-For Tool Router issues:
-1. Check console for MCP connection messages
-2. Look for errors like "MCP transport failed"
-3. Check Composio session is created (should see session ID in logs)
-4. Try creating new session: click "New Chat"
 
 ---
 
@@ -377,9 +341,6 @@ If not found, create a new issue with:
 | `Failed to fetch` | Network connectivity issue | Check proxy/VPN/firewall |
 | `Model not found` | Model name typo or not available | Check model name in Settings |
 | `Invalid response format` | API returned unexpected data | Update extension to latest |
-| `Session expired` | Composio session timed out | Click "New Chat" |
-| `Tool not found` | Composio tool unavailable | Authenticate app in Composio Dashboard |
-| `Permission denied` | Missing OAuth permissions | Connect app in Composio Dashboard |
 
 ---
 
@@ -397,13 +358,8 @@ If not found, create a new issue with:
 
 **Browser Tools not working:**
 - This is expected for most users
-- Use Tool Router mode instead
+- Use regular chat mode instead
 - Requires special Google permissions
-
-**Tool Router issues:**
-- Verify Composio API key
-- Authenticate apps in Composio Dashboard
-- Click "New Chat" to refresh session
 
 ---
 

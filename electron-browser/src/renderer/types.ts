@@ -73,7 +73,6 @@ export interface Settings {
   llm?: LLMConfig;
   // Legacy fields for backward compatibility
   googleApiKey: string;
-  composioApiKey?: string;
   model: string;
 }
 
@@ -125,6 +124,5 @@ export const ChatHistorySchema = z.array(MessageSchema);
 export const SettingsSchema = z.object({
   llm: LLMConfigSchema.optional(),
   googleApiKey: z.string(),
-  composioApiKey: z.string().optional(),
   model: z.string(),
 });

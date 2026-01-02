@@ -49,6 +49,7 @@ export default defineConfig({
       input: {
         sidepanel: resolve(__dirname, 'sidepanel.html'),
         settings: resolve(__dirname, 'settings.html'),
+        popup: resolve(__dirname, 'popup.html'),
         background: resolve(__dirname, 'background.ts'),
         content: resolve(__dirname, 'content.ts'),
       },

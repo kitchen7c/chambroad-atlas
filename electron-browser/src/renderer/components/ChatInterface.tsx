@@ -3,7 +3,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Message, Settings } from '../types';
 import { streamWithGemini } from '../services/gemini-service';
-import { initializeMcpClient, areToolsInitialized } from '../services/tool-router-service';
 import { ToolCallComponent } from './ToolCallComponent';
 
 // Custom link component that opens URLs in browser sidebar
@@ -103,16 +102,7 @@ const ChatInterface = ({
     try {
       // Use appropriate stream service based on mode
       if (mode === 'chat') {
-        // Chat mode: Initialize MCP tools on first chat (if not already initialized)
-        if (!areToolsInitialized() && settings?.composioApiKey) {
-          try {
-            await initializeMcpClient(settings.composioApiKey);
-          } catch (error) {
-            // Continue without tools if initialization fails
-          }
-        }
-
-        // Chat mode: always use AI SDK with Composio tools (if available)
+        // Chat mode: use AI SDK
         await new Promise<void>((resolve, reject) => {
           window.electronAPI.streamChatWithTools(
             userMessage.content,

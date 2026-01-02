@@ -1,9 +1,7 @@
 import type { Message, Settings } from '../types';
 
 /**
- * Stream chat with Composio tools using AI SDK (via IPC to main process)
- * Uses Gemini LLM with Composio Tool Router MCP tools
- * Falls back to simple chat if tools aren't initialized
+ * Stream chat using Gemini API via IPC to main process
  */
 export async function streamChatWithTools(
   userInput: string,
@@ -27,10 +25,7 @@ export async function streamChatWithTools(
 
     console.log('[Chat] Streaming with Gemini via IPC...');
 
-    // Note: Tools are retrieved in the main process, not passed through IPC
-    // (they contain non-serializable functions and can't be cloned)
-
-    // Call streamText via IPC (runs in main process where google() can access GOOGLE_GENERATIVE_AI_API_KEY)
+    // Call streamText via IPC (runs in main process)
     const result = await window.electronAPI.streamChatWithTools(
       userInput,
       messages,
@@ -56,14 +51,6 @@ export async function streamChatWithTools(
         switch (chunkObj.type) {
           case 'text':
             onChunk(String(chunkObj.data));
-            break;
-
-          case 'tool-call':
-            onChunk(`\n\n*Calling tool: ${chunkObj.toolName}*\n\n`);
-            break;
-
-          case 'tool-result':
-            onChunk(`*Tool result: ${JSON.stringify(chunkObj.data)}*\n\n`);
             break;
 
           case 'error':

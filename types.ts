@@ -56,8 +56,6 @@ export const LLM_PROVIDER_PRESETS: Record<Exclude<LLMProvider, 'custom'>, { base
   },
 };
 
-export type ToolMode = 'tool-router';
-
 export interface Settings {
   // New LLM configuration (supports multiple providers)
   llm: LLMConfig;
@@ -66,17 +64,6 @@ export interface Settings {
   provider?: 'google';  // Only 'google' supported for legacy compatibility
   apiKey?: string;
   model?: string;
-  // Tool configuration
-  toolMode?: ToolMode;
-  composioApiKey?: string;
-}
-
-export interface ComposioSession {
-  sessionId: string;
-  chatSessionMcpUrl: string;
-  toolRouterMcpUrl: string;
-  expiresAt: number;
-  createdAt: number;
 }
 
 export interface ChatState {
@@ -256,15 +243,6 @@ export const GeminiResponseSchema = z.object({
 });
 
 /**
- * Validates Composio session response
- */
-export const ComposioSessionSchema = z.object({
-  session_id: z.string().min(1),
-  chat_session_mcp_url: z.string().url(),
-  tool_router_instance_mcp_url: z.string().url(),
-});
-
-/**
  * Validates page context from content script
  */
 export const PageContextSchema = z.object({
@@ -350,6 +328,4 @@ export const LLMConfigSchema = z.object({
 
 export const SettingsSchemaV2 = z.object({
   llm: LLMConfigSchema,
-  toolMode: z.enum(['tool-router']).optional(),
-  composioApiKey: z.string().optional(),
 });

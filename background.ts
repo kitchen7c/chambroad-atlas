@@ -13,15 +13,48 @@ const memory: BrowserMemory = {
   sessionData: {}
 };
 
-chrome.sidePanel
-  .setPanelBehavior({ openPanelOnActionClick: true })
-  .catch((error: Error) => console.error(error));
+function isRestrictedTabUrl(url: string | undefined) {
+  if (!url) return true;
+  return [
+    'chrome://',
+    'chrome-extension://',
+    'edge://',
+    'about:',
+    'devtools://',
+  ].some((prefix) => url.startsWith(prefix));
+}
+
+async function openAtlasUiFallback() {
+  await chrome.tabs.create({ url: chrome.runtime.getURL('sidepanel.html') });
+}
+
+// UI opening is handled by `popup.html` (Manifest action popup) to support Arc and other Chromium browsers.
 
 // Listen for extension icon clicks
 chrome.action.onClicked.addListener((tab) => {
-  if (tab.id) {
-    chrome.sidePanel.open({ tabId: tab.id });
-  }
+  (async () => {
+    try {
+      if (!chrome.sidePanel?.open) {
+        await openAtlasUiFallback();
+        return;
+      }
+
+      const tabId = tab.id;
+      if (!tabId || isRestrictedTabUrl(tab.url)) {
+        await openAtlasUiFallback();
+        return;
+      }
+
+      await chrome.sidePanel.open({ tabId });
+    } catch (error) {
+      console.error('[Atlas] Failed to open UI:', error);
+      try {
+        await openAtlasUiFallback();
+      } catch {
+        // ignore
+      }
+    }
+  })();
 });
 
 // Track page visits for memory

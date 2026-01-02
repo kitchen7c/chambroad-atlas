@@ -36,11 +36,6 @@
       "maxTokens": "Max Tokens",
       "timeout": "Timeout (seconds)"
     },
-    "composio": {
-      "title": "Composio API Key",
-      "placeholder": "Enter your Composio API key (optional)",
-      "help": "Enable Composio Tool Router for access to 500+ app integrations"
-    },
     "language": {
       "title": "Language",
       "auto": "System Default",

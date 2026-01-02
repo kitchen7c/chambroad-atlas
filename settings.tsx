@@ -16,11 +16,8 @@ function SettingsPage() {
       apiKey: '',
       model: LLM_PROVIDER_PRESETS.google.defaultModel,
     },
-    toolMode: 'tool-router',
-    composioApiKey: '',
   });
   const [saved, setSaved] = useState(false);
-  const [showComposioKey, setShowComposioKey] = useState(false);
 
   useEffect(() => {
     chrome.storage.local.get(['atlasSettings'], (result) => {
@@ -35,11 +32,12 @@ function SettingsPage() {
               apiKey: oldSettings.apiKey,
               model: oldSettings.model || LLM_PROVIDER_PRESETS.google.defaultModel,
             },
-            toolMode: oldSettings.toolMode,
-            composioApiKey: oldSettings.composioApiKey,
           });
         } else if (oldSettings.llm) {
-          setSettings(oldSettings);
+          // Clean migration - only keep llm config
+          setSettings({
+            llm: oldSettings.llm,
+          });
         }
       }
     });
@@ -117,31 +115,6 @@ function SettingsPage() {
           onChange={handleLLMChange}
           onTestConnection={handleTestConnection}
         />
-
-        <div className="setting-group">
-          <label htmlFor="composio-key">{t('settings.composio.title')}</label>
-          <div className="api-key-input-wrapper">
-            <input
-              id="composio-key"
-              type={showComposioKey ? 'text' : 'password'}
-              value={settings.composioApiKey || ''}
-              onChange={(e) => setSettings({ ...settings, composioApiKey: e.target.value })}
-              placeholder={t('settings.composio.placeholder')}
-              className="api-key-input"
-            />
-            <button
-              type="button"
-              className="toggle-visibility"
-              onClick={() => setShowComposioKey(!showComposioKey)}
-              aria-label={showComposioKey ? 'Hide Composio key' : 'Show Composio key'}
-            >
-              {showComposioKey ? '👁️' : '👁️‍🗨️'}
-            </button>
-          </div>
-          <p className="help-text">
-            {t('settings.composio.help')}
-          </p>
-        </div>
 
         <LanguageSwitch />
 

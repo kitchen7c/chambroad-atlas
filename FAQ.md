@@ -20,16 +20,11 @@
 - Most free API keys don't have this permission yet
 
 **What you can do:**
-1. **Use Tool Router mode instead**:
-   - Get a Composio API key (free tier available)
-   - Configure it in Settings
-   - Access 500+ app integrations (Gmail, Slack, GitHub, etc.)
-
-2. **Wait for Google to open access**:
+1. **Wait for Google to open access**:
    - Computer Use is in preview/experimental phase
    - Expected to be available to more users in 2025
 
-3. **Use regular chat features**:
+2. **Use regular chat features**:
    - AI conversations work normally
    - Browser history search works
    - All features except Browser Tools are available
@@ -51,27 +46,26 @@
 
 ---
 
-## Q: What's the difference between Tool Router and Browser Tools?
+## Q: What LLM providers are supported?
 
-**A:** They're completely different approaches:
+**A:** Atlas supports multiple providers:
 
-**Tool Router** (Works for most users):
-- Calls application APIs directly (Gmail API, Slack API, etc.)
-- Fast and reliable
-- Requires: Composio API key
-- Supports: 500+ apps with APIs
-- **Can't**: Control any random website
+1. **Google Gemini** (Default)
+   - Gemini 2.5 Pro, Flash, Flash Lite
+   - Required for Browser Tools mode
 
-**Browser Tools** (Limited access):
-- Controls browser like a human (screenshots, clicks, typing)
-- Slower but more versatile
-- Requires: Computer Use model permission
-- Supports: Any website you can see
-- **Can't**: Use without special permission
+2. **OpenAI**
+   - GPT-4 Turbo, GPT-4o, GPT-3.5 Turbo
 
-**Example:**
-- Sending Gmail: Both can do it (Tool Router is faster)
-- Operating a forum without API: Only Browser Tools can do it
+3. **Anthropic Claude**
+   - Claude 3 Opus, Sonnet, Haiku
+
+4. **Ollama (Local)**
+   - Run models locally
+   - Llama 3, Mistral, CodeLlama, etc.
+
+5. **Custom API**
+   - Any OpenAI-compatible endpoint
 
 ---
 
@@ -90,22 +84,12 @@
 
 ---
 
-## Q: Can I use Claude or OpenAI instead of Gemini?
-
-**A:** Currently, the extension only supports Google Gemini models.
-
-The code includes AI SDK with Claude/OpenAI support, but the UI only implements Gemini integration.
-
-If you'd like to add support for other providers, contributions are welcome!
-
----
-
 ## Q: Is my API key secure?
 
 **A:** Yes, your API keys are stored locally:
 - Saved in Chrome's local storage
 - Never sent to any third-party servers
-- Only used to communicate directly with Google/Composio APIs
+- Only used to communicate directly with LLM provider APIs
 - You can verify by checking the code (open source)
 
 ---
@@ -117,7 +101,6 @@ If you'd like to add support for other providers, contributions are welcome!
 1. **GitHub Issues**: https://github.com/ComposioHQ/open-chatgpt-atlas/issues
 2. **Check TROUBLESHOOTING.md** for detailed diagnostic steps
 3. **Browser Console**: Press F12 → Console tab for error details
-4. **Composio Documentation**: https://docs.composio.dev/
 
 ---
 
@@ -131,11 +114,11 @@ If you'd like to add support for other providers, contributions are welcome!
 **"Failed to fetch" error:**
 - Network connectivity issue
 - Try different proxy node
-- Check if Google API is accessible
+- Check if LLM API is accessible
 
 **Computer Use features not working:**
 - This is expected - requires special model access
-- Use Tool Router mode instead
+- Use regular chat mode instead
 
 ---
 

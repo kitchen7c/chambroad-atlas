@@ -39,7 +39,6 @@ function App() {
           // Fall back to defaults if validation fails
           const defaultSettings: SettingsType = {
             googleApiKey: '',
-            composioApiKey: '',
             model: 'gemini-2.0-flash-exp',
           };
           setSettings(defaultSettings);
@@ -48,7 +47,6 @@ function App() {
         // Default settings
         const defaultSettings: SettingsType = {
           googleApiKey: '',
-          composioApiKey: '',
           model: 'gemini-2.0-flash-exp',
         };
         setSettings(defaultSettings);
