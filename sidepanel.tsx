@@ -318,6 +318,15 @@ function ChatSidebar() {
     }
   }, []);
 
+  // Cleanup browser agent on unmount
+  useEffect(() => {
+    return () => {
+      if (browserAgentRef.current) {
+        browserAgentRef.current.stop();
+      }
+    };
+  }, []);
+
   const openSettings = () => {
     chrome.runtime.openOptionsPage();
   };
@@ -369,6 +378,12 @@ function ChatSidebar() {
   const runBrowserAgent = async (task: string) => {
     if (!settings?.llm) {
       throw new Error('LLM not configured');
+    }
+
+    // Clean up previous agent
+    if (browserAgentRef.current) {
+      browserAgentRef.current.stop();
+      browserAgentRef.current = null;
     }
 
     const callbacks: AgentCallbacks = {
@@ -436,6 +451,8 @@ function ChatSidebar() {
       });
     } catch (error) {
       throw error;
+    } finally {
+      browserAgentRef.current = null;
     }
   };
 
