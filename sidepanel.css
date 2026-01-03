@@ -407,17 +407,16 @@ body {
 
 .typing-indicator {
   display: flex;
-  gap: 6px;
-  padding: 8px 0;
+  gap: 4px;
+  padding: 4px 0;
 }
 
 .typing-indicator span {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--text-disabled);
   animation: typing 1.4s infinite ease-in-out;
-  opacity: 0.6;
 }
 
 .typing-indicator span:nth-child(1) {
@@ -435,10 +434,10 @@ body {
 @keyframes typing {
   0%, 60%, 100% {
     transform: translateY(0);
-    opacity: 0.6;
+    opacity: 0.4;
   }
   30% {
-    transform: translateY(-8px);
+    transform: translateY(-4px);
     opacity: 1;
   }
 }
