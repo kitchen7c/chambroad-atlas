@@ -108,8 +108,10 @@ export class BrowserAgent {
               action: tc.arguments.action as ActionType,
               params: tc.arguments.params as Record<string, unknown>
             }));
-        } else if (!this.usesFunctionCalling && response.content) {
-          // Try to parse JSON from markdown
+        }
+
+        // If no actions from tool_calls, try parsing JSON from content (fallback for all providers)
+        if (actions.length === 0 && response.content) {
           actions = this.parseActionsFromMarkdown(response.content);
         }
 

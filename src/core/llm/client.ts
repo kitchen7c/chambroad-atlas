@@ -122,6 +122,8 @@ export class LLMClient {
           parameters: tool.parameters,
         },
       }));
+      // Some providers need tool_choice to encourage function calling
+      body.tool_choice = 'auto';
     }
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -143,12 +145,32 @@ export class LLMClient {
     const message = data.choices?.[0]?.message;
 
     // Extract tool calls if present
-    const toolCalls = message?.tool_calls?.map((tc: any) => ({
-      name: tc.function.name,
-      arguments: typeof tc.function.arguments === 'string'
-        ? JSON.parse(tc.function.arguments)
-        : tc.function.arguments,
-    }));
+    let toolCalls: LLMToolCall[] | undefined;
+    if (message?.tool_calls && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+      try {
+        toolCalls = message.tool_calls.map((tc: any) => {
+          let args: Record<string, unknown>;
+          if (typeof tc.function?.arguments === 'string') {
+            try {
+              args = JSON.parse(tc.function.arguments);
+            } catch {
+              // If JSON parse fails, try to extract action from the string
+              console.warn('Failed to parse tool arguments:', tc.function.arguments);
+              args = {};
+            }
+          } else {
+            args = tc.function?.arguments || {};
+          }
+          return {
+            name: tc.function?.name || 'unknown',
+            arguments: args,
+          };
+        });
+      } catch (e) {
+        console.warn('Failed to parse tool calls:', e);
+        toolCalls = undefined;
+      }
+    }
 
     return {
       content: message?.content || '',
