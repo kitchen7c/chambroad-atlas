@@ -1,7 +1,5 @@
 // src/core/browser-agent/actions.ts
 
-import type { ActionType } from './types';
-
 // Function calling tool definition for LLMs
 export const browserActionTool = {
   name: 'browser_action',
@@ -17,7 +15,7 @@ export const browserActionTool = {
           'hover', 'select', 'pressKey', 'goBack', 'goForward', 'refresh',
           'dragDrop', 'uploadFile', 'switchTab', 'executeJS',
           'getElements', 'getElementDetails'
-        ] as ActionType[],
+        ],
         description: 'The action to perform'
       },
       params: {
@@ -52,8 +50,8 @@ export const browserActionTool = {
           // executeJS params
           code: { type: 'string', description: 'JavaScript code to execute' },
           // DragDrop params
-          from: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } } },
-          to: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } } },
+          from: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } }, required: ['x', 'y'] },
+          to: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } }, required: ['x', 'y'] },
         }
       }
     }
