@@ -1553,7 +1553,7 @@ GUIDELINES:
   }
 
   return (
-    <div className="chat-container dark-mode">
+    <div className="chat-container">
       <div className="chat-header">
   <h1>Atlas</h1>
   <div className="header-actions">
