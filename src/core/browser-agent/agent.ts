@@ -2,7 +2,7 @@
 
 import { LLMClient, LLMMessage, LLMTool } from '../llm/client';
 import type { LLMConfig } from '../../../types';
-import type { BrowserAction, ActionResult, AgentMode } from './types';
+import type { BrowserAction, ActionResult, AgentMode, ActionType } from './types';
 import { browserActionTool } from './actions';
 import { selectAgentMode, supportsFunctionCalling } from './providers';
 import { getConfirmLevel, formatConfirmMessage } from './safety';
@@ -38,13 +38,32 @@ export class BrowserAgent {
     this.usesFunctionCalling = supportsFunctionCalling(config.provider);
   }
 
+  // Validate if a string is a valid ActionType
+  private isValidActionType(action: unknown): action is ActionType {
+    const validActions: ActionType[] = [
+      'click', 'type', 'scroll', 'navigate', 'screenshot', 'wait',
+      'hover', 'select', 'pressKey', 'goBack', 'goForward', 'refresh',
+      'dragDrop', 'uploadFile', 'switchTab', 'executeJS',
+      'getElements', 'getElementDetails'
+    ];
+    return typeof action === 'string' && validActions.includes(action as ActionType);
+  }
+
   // Run the agent with a task
   async run(task: string): Promise<string> {
     this.abortController = new AbortController();
-    const maxTurns = this.options.maxTurns || 20;
+    // Validate and clamp maxTurns to reasonable range (1-100)
+    const maxTurns = Math.min(Math.max(this.options.maxTurns || 20, 1), 100);
 
     // Get initial page context
-    const pageSummary = await getPageSummary();
+    let pageSummary;
+    try {
+      pageSummary = await getPageSummary();
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.options.callbacks?.onError?.(err);
+      throw new Error(`Failed to get page summary: ${err.message}`);
+    }
 
     // Build initial messages
     const systemPrompt = this.usesFunctionCalling
@@ -80,10 +99,12 @@ export class BrowserAgent {
 
         if (response.toolCalls?.length) {
           // Function calling response
-          actions = response.toolCalls.map(tc => ({
-            action: tc.arguments.action as BrowserAction['action'],
-            params: tc.arguments.params as Record<string, unknown>
-          }));
+          actions = response.toolCalls
+            .filter(tc => this.isValidActionType(tc.arguments.action))
+            .map(tc => ({
+              action: tc.arguments.action as ActionType,
+              params: tc.arguments.params as Record<string, unknown>
+            }));
         } else if (!this.usesFunctionCalling && response.content) {
           // Try to parse JSON from markdown
           actions = this.parseActionsFromMarkdown(response.content);
@@ -102,7 +123,15 @@ export class BrowserAgent {
 
           if (confirmLevel === 'confirm') {
             const message = formatConfirmMessage(action, pageSummary);
-            const confirmed = await this.options.callbacks?.onConfirmRequired?.(message, action);
+            let confirmed = false;
+            try {
+              confirmed = await this.options.callbacks?.onConfirmRequired?.(message, action) || false;
+            } catch (error) {
+              const err = error instanceof Error ? error : new Error(String(error));
+              this.options.callbacks?.onError?.(err);
+              // Default to denying the action on error
+              confirmed = false;
+            }
 
             if (!confirmed) {
               results.push({ success: false, message: 'Action cancelled by user' });
@@ -146,8 +175,9 @@ export class BrowserAgent {
         if ((error as Error).name === 'AbortError') {
           return lastResponse + '\n\n[Stopped by user]';
         }
-        this.options.callbacks?.onError?.(error as Error);
-        throw error;
+        const err = error instanceof Error ? error : new Error(String(error));
+        this.options.callbacks?.onError?.(err);
+        throw err;
       }
     }
 
@@ -168,11 +198,15 @@ export class BrowserAgent {
       const parsed = JSON.parse(jsonMatch[1]);
       const actions = Array.isArray(parsed) ? parsed : [parsed];
 
-      return actions.map(a => ({
-        action: a.action,
-        params: a.params || {}
-      }));
-    } catch {
+      return actions
+        .filter(a => this.isValidActionType(a.action))
+        .map(a => ({
+          action: a.action as ActionType,
+          params: a.params || {}
+        }));
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.options.callbacks?.onError?.(new Error(`Failed to parse action JSON: ${err.message}`));
       return [];
     }
   }
