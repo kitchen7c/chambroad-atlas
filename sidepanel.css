@@ -1,3 +1,22 @@
+:root {
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-disabled: #9ca3af;
+  --bg-primary: #ffffff;
+  --bg-surface: #f9fafb;
+  --bg-hover: #f3f4f6;
+  --border: #e5e7eb;
+  --border-light: #f3f4f6;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -336,6 +355,103 @@ body {
   gap: 8px;
   align-items: center;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.03);
+  position: relative;
+}
+
+.command-menu {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 64px;
+  max-height: 280px;
+  overflow: auto;
+  background: #0f0f0f;
+  border: 1px solid #333333;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  z-index: 20;
+}
+
+.command-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #262626;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+
+.command-menu-hint {
+  color: #a0a0a0;
+}
+
+.command-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.command-item:hover,
+.command-item.active {
+  background: #1f1f1f;
+}
+
+.command-item-main {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.command-item-command {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 12px;
+  color: #93c5fd;
+}
+
+.command-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+.command-item-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #a0a0a0;
+  line-height: 1.4;
+}
+
+.command-button {
+  padding: 0;
+  background: #262626;
+  color: #ffffff;
+  border: 1px solid #333333;
+  border-radius: 0;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.command-button:hover:not(:disabled) {
+  background: #333333;
+}
+
+.command-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .chat-input {
