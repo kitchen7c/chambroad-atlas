@@ -60,21 +60,35 @@ export function buildSystemPrompt(mode: AgentMode): string {
 // Build user message with page context
 export function buildUserMessage(
   task: string,
-  pageSummary: PageSummary
+  pageSummary: PageSummary | null | undefined
 ): string {
-  const elementsInfo = Object.entries(pageSummary.elements)
+  if (!pageSummary) {
+    return `## 当前页面
+无法获取页面信息
+
+## 用户任务
+${task}`;
+  }
+
+  const elements = pageSummary.elements || {};
+  const elementsInfo = Object.entries(elements)
     .filter(([_, count]) => count > 0)
     .map(([type, count]) => `${count} 个${typeLabel(type)}`)
-    .join(', ');
+    .join(', ') || '无';
+
+  const url = pageSummary.url || '未知';
+  const title = pageSummary.title || '未知';
+  const viewport = pageSummary.viewport || { width: 0, height: 0 };
+  const visibleText = pageSummary.visibleText || '';
 
   return `## 当前页面
-URL: ${pageSummary.url}
-标题: ${pageSummary.title}
-视口: ${pageSummary.viewport.width}x${pageSummary.viewport.height}
+URL: ${url}
+标题: ${title}
+视口: ${viewport.width}x${viewport.height}
 可交互元素: ${elementsInfo}
 
 页面内容摘要:
-${pageSummary.visibleText}
+${visibleText}
 
 ## 用户任务
 ${task}`;
