@@ -380,6 +380,9 @@ function ChatSidebar() {
       throw new Error('LLM not configured');
     }
 
+    console.log('🚀 Starting browser agent with task:', task);
+    console.log('🔧 LLM config:', settings.llm.provider, settings.llm.model);
+
     // Clean up previous agent
     if (browserAgentRef.current) {
       browserAgentRef.current.stop();
@@ -388,6 +391,7 @@ function ChatSidebar() {
 
     const callbacks: AgentCallbacks = {
       onThinking: (message) => {
+        console.log('💭 Agent thinking:', message);
         setMessages(prev => {
           const updated = [...prev];
           const lastMsg = updated[updated.length - 1];
@@ -398,6 +402,7 @@ function ChatSidebar() {
         });
       },
       onActionStart: (action) => {
+        console.log('▶️ Action start:', action);
         setMessages(prev => {
           const updated = [...prev];
           const lastMsg = updated[updated.length - 1];
@@ -408,6 +413,7 @@ function ChatSidebar() {
         });
       },
       onActionComplete: (_action, result) => {
+        console.log('✅ Action complete:', result);
         setMessages(prev => {
           const updated = [...prev];
           const lastMsg = updated[updated.length - 1];
@@ -421,7 +427,7 @@ function ChatSidebar() {
         return window.confirm(message);
       },
       onError: (error) => {
-        console.error('Browser agent error:', error);
+        console.error('❌ Browser agent error:', error);
       }
     };
 
@@ -434,12 +440,14 @@ function ChatSidebar() {
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: 'Analyzing page...',
+      content: '正在分析页面...',
     };
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
+      console.log('🏃 Running agent...');
       const result = await browserAgentRef.current.run(task);
+      console.log('🎉 Agent completed with result:', result?.slice(0, 100));
 
       setMessages(prev => {
         const updated = [...prev];
@@ -450,6 +458,16 @@ function ChatSidebar() {
         return updated;
       });
     } catch (error) {
+      console.error('❌ Agent run failed:', error);
+      // Show error in UI instead of just throwing
+      setMessages(prev => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg?.role === 'assistant') {
+          lastMsg.content = `执行失败: ${(error as Error).message}\n\n请确保当前页面不是 chrome:// 页面，并重试。`;
+        }
+        return updated;
+      });
       throw error;
     } finally {
       browserAgentRef.current = null;
