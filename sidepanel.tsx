@@ -1590,8 +1590,13 @@ GUIDELINES:
       <div className="messages-container" ref={messagesContainerRef}>
         {messages.length === 0 ? (
           <div className="welcome-message">
-            <h2>{t('chat.welcome')}</h2>
-            <p>{t('chat.welcomeDesc')}</p>
+            <h2>Welcome to Atlas</h2>
+            <p>Ask anything or enable Browser Tools to automate your browser.</p>
+            {!browserToolsEnabled && (
+              <button className="welcome-cta" onClick={toggleBrowserTools}>
+                Enable Browser Tools
+              </button>
+            )}
           </div>
         ) : (
           messages.map((message) => (

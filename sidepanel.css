@@ -242,6 +242,7 @@ body {
   background: #c5c5d2;
 }
 
+/* ===== Welcome State ===== */
 .welcome-message {
   display: flex;
   flex-direction: column;
@@ -250,21 +251,38 @@ body {
   height: 100%;
   text-align: center;
   padding: 32px 24px;
-  color: #8e8ea0;
 }
 
 .welcome-message h2 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
-  margin-bottom: 12px;
-  color: #343541;
+  margin-bottom: 8px;
+  color: var(--text-primary);
 }
 
 .welcome-message p {
   font-size: 14px;
-  line-height: 1.6;
-  max-width: 400px;
-  color: #8e8ea0;
+  line-height: 1.5;
+  max-width: 280px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.welcome-cta {
+  padding: 10px 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.welcome-cta:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-disabled);
 }
 
 /* ===== Messages ===== */
