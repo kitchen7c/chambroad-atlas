@@ -55,6 +55,9 @@ export class BrowserAgent {
     // Validate and clamp maxTurns to reasonable range (1-100)
     const maxTurns = Math.min(Math.max(this.options.maxTurns || 20, 1), 100);
 
+    // Store original task for continuation messages
+    const originalTask = task;
+
     // Get initial page context
     let pageSummary;
     try {
@@ -183,7 +186,7 @@ export class BrowserAgent {
 
         this.messages.push({
           role: 'user',
-          content: `## 操作结果\n${resultSummary}\n\n## 当前页面状态\nURL: ${newSummary.url || '未知'}\n标题: ${newSummary.title || '未知'}\n可交互元素: ${elementsInfo}\n\n页面内容摘要:\n${(newSummary.visibleText || '').slice(0, 300)}\n\n请继续完成任务，或者如果任务已完成，总结结果。`
+          content: `## 操作结果\n${resultSummary}\n\n## 当前页面状态\nURL: ${newSummary.url || '未知'}\n标题: ${newSummary.title || '未知'}\n可交互元素: ${elementsInfo}\n\n页面内容摘要:\n${(newSummary.visibleText || '').slice(0, 300)}\n\n## 原始任务\n${originalTask}\n\n请分析当前页面，继续执行任务。如果需要找到元素，请先调用 getElements。如果任务已全部完成，请总结结果。`
         });
 
       } catch (error) {

@@ -36,13 +36,15 @@ export function buildSystemPrompt(mode: AgentMode): string {
 1. 先用 getElements 了解页面有哪些可交互元素
 2. 根据元素的 index 执行 click、type 等操作
 3. 每次操作后会收到结果，据此决定下一步
-4. 任务完成后说明结果
+4. 对于多步任务（如"打开网站并搜索"），必须持续执行直到所有步骤完成
+5. 只有当原始任务的所有部分都完成后，才总结结果
 
 ## 注意事项
 - 优先使用 index 操作元素（更可靠）
 - 如果元素不在视口内，先 scroll 到可见位置
 - 输入前可能需要先 click 聚焦输入框
-- 表单提交可以用 click 提交按钮或 pressKey Enter`;
+- 表单提交可以用 click 提交按钮或 pressKey Enter
+- 导航到新页面后，必须调用 getElements 获取新页面的元素`;
 
   if (mode === 'vision' || mode === 'hybrid') {
     return base + `
