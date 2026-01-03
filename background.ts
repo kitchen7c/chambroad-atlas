@@ -295,7 +295,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           if (isRestrictedTabUrl(tab.url)) {
             sendResponse({
               success: false,
-              error: '无法访问该页面',
+              error: '无法访问该页面（chrome:// 等浏览器内部页面无法被扩展读取）。请打开普通网页（http/https）后再试。',
               url: tab.url,
             });
             return;
@@ -304,10 +304,10 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           const response = await chrome.tabs.sendMessage(tab.id, request);
           sendResponse(response);
         } else {
-          sendResponse({ error: 'No active tab' });
+          sendResponse({ success: false, error: 'No active tab' });
         }
       } catch (error) {
-        sendResponse({ error: (error as Error).message });
+        sendResponse({ success: false, error: (error as Error).message });
       }
     })();
     return true;
@@ -323,7 +323,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           if (isRestrictedTabUrl(tab.url)) {
             sendResponse({
               success: false,
-              error: '无法访问该页面',
+              error: '无法访问该页面（chrome:// 等浏览器内部页面无法被扩展读取）。请打开普通网页（http/https）后再试。',
               url: tab.url,
             });
             return;
@@ -332,10 +332,10 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           const response = await chrome.tabs.sendMessage(tab.id, request);
           sendResponse(response);
         } else {
-          sendResponse({ error: 'No active tab' });
+          sendResponse({ success: false, error: 'No active tab' });
         }
       } catch (error) {
-        sendResponse({ error: (error as Error).message });
+        sendResponse({ success: false, error: (error as Error).message });
       }
     })();
     return true;
