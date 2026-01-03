@@ -1089,16 +1089,18 @@ body {
 
 /* ===== Article Card ===== */
 .article-card {
-  background: #262626;
-  border-radius: 8px;
-  padding: 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s ease;
 }
 
 .article-card:hover {
-  background: #333333;
+  border-color: var(--text-disabled);
+  background: var(--bg-surface);
 }
 
 .article-card.read {
@@ -1112,32 +1114,48 @@ body {
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #ffffff;
-  margin-bottom: 6px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
   line-height: 1.4;
 }
 
 .article-card-indicators {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .unread-dot {
-  color: #2563eb;
-  font-size: 10px;
+  color: var(--accent);
+  font-size: 8px;
 }
 
 .favorite-star {
-  color: #fbbf24;
+  color: var(--warning);
   font-size: 12px;
 }
 
 .article-card-meta {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
-  color: #666666;
+  color: var(--text-secondary);
+}
+
+.article-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.article-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--bg-surface);
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 /* ===== Article Detail ===== */
@@ -1222,28 +1240,11 @@ body {
 
 /* ===== AI Processing Elements ===== */
 
-/* Article Card Tags */
-.article-card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 6px 0;
-}
-
-.article-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  background: #333333;
-  border-radius: 10px;
-  font-size: 11px;
-  color: #aaaaaa;
-}
-
 .article-tag-more {
   display: inline-block;
   padding: 2px 6px;
   font-size: 11px;
-  color: #666666;
+  color: var(--text-disabled);
 }
 
 /* Article Card Score Badge */
