@@ -5,7 +5,7 @@ import { initI18n } from './src/i18n';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Settings, Message } from './types';
-import { GeminiResponseSchema } from './types';
+import { GeminiResponseSchema, PageContextSchema } from './types';
 import { SourcesView } from './src/components/SourcesView';
 import { ArticlesView } from './src/components/ArticlesView';
 import { ArticleDetail } from './src/components/ArticleDetail';
@@ -82,6 +82,7 @@ function ChatSidebar() {
   const { t } = useTranslation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -93,6 +94,8 @@ function ChatSidebar() {
   const [view, setView] = useState<ViewState>({ type: 'chat' });
   const abortControllerRef = useRef<AbortController | null>(null);
   const listenerAttachedRef = useRef(false);
+  const [commandMenuOpen, setCommandMenuOpen] = useState(false);
+  const [commandMenuIndex, setCommandMenuIndex] = useState(0);
 
   const executeTool = async (toolName: string, parameters: any, retryCount = 0): Promise<any> => {
     const MAX_RETRIES = 3;
@@ -146,6 +149,8 @@ function ChatSidebar() {
         }, handleResponse);
       } else if (toolName === 'getPageContext') {
         chrome.runtime.sendMessage({ type: 'GET_PAGE_CONTEXT' }, handleResponse);
+      } else if (toolName === 'getSelectedText') {
+        chrome.runtime.sendMessage({ type: 'GET_SELECTED_TEXT' }, handleResponse);
       } else if (toolName === 'navigate') {
         chrome.runtime.sendMessage({ type: 'NAVIGATE', url: parameters.url }, handleResponse);
       } else if (toolName === 'getBrowserHistory') {
@@ -188,6 +193,66 @@ function ChatSidebar() {
         reject(new Error(`Unknown tool: ${toolName}`));
       }
     });
+  };
+
+  const slashCommands = [
+    {
+      command: '/page',
+      insertText: '/page ',
+      title: t('commands.page.title'),
+      description: t('commands.page.desc'),
+    },
+    {
+      command: '/summarize',
+      insertText: '/summarize ',
+      title: t('commands.summarize.title'),
+      description: t('commands.summarize.desc'),
+    },
+    {
+      command: '/sources',
+      insertText: '/sources',
+      title: t('commands.sources.title'),
+      description: t('commands.sources.desc'),
+    },
+    {
+      command: '/articles',
+      insertText: '/articles',
+      title: t('commands.articles.title'),
+      description: t('commands.articles.desc'),
+    },
+    {
+      command: '/back',
+      insertText: '/back',
+      title: t('commands.back.title'),
+      description: t('commands.back.desc'),
+    },
+  ];
+
+  const shouldShowCommandMenu = !isLoading && (commandMenuOpen || input.trimStart().startsWith('/'));
+
+  const commandFilterToken = (() => {
+    const trimmed = input.trimStart();
+    if (!trimmed.startsWith('/')) return '';
+    return (trimmed.split(/\s+/)[0] || '').toLowerCase();
+  })();
+
+  const filteredCommands =
+    commandFilterToken && commandFilterToken !== '/'
+      ? slashCommands.filter((c) => c.command.startsWith(commandFilterToken))
+      : slashCommands;
+
+  useEffect(() => {
+    if (!shouldShowCommandMenu) return;
+    setCommandMenuIndex(0);
+  }, [commandFilterToken, shouldShowCommandMenu]);
+
+  const applySelectedCommand = () => {
+    const selected = filteredCommands[commandMenuIndex];
+    if (!selected) return;
+    setInput(selected.insertText);
+    setCommandMenuOpen(false);
+    setCommandMenuIndex(0);
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const loadSettings = async () => {
@@ -307,6 +372,60 @@ function ChatSidebar() {
       abortControllerRef.current.abort();
       setIsLoading(false);
     }
+  };
+
+  const buildPageSummaryPrompt = (options: {
+    page: { title: string; url: string; description?: string; textContent: string; links: Array<{ text: string; href: string }> };
+    selectedText?: string;
+    userQuestion?: string;
+  }): { prompt: string; displayContent: string } => {
+    const title = options.page.title.trim();
+    const url = options.page.url.trim();
+    const description = options.page.description?.trim();
+    const textContent = options.page.textContent.trim().slice(0, 8000);
+
+    const selectedText = options.selectedText?.trim().slice(0, 3000);
+    const hasSelection = Boolean(selectedText);
+
+    const links = options.page.links
+      .map((link) => ({ text: link.text.trim(), href: link.href.trim() }))
+      .filter((link) => link.text && link.href)
+      .slice(0, 10);
+
+    const userQuestion = options.userQuestion?.trim();
+    const displayContent = userQuestion
+      ? `总结当前页面：${userQuestion}`
+      : hasSelection
+        ? '总结当前页面（优先总结选中文本）'
+        : '总结当前页面';
+
+    const instruction = userQuestion
+      ? `请基于以下页面内容回答这个问题：${userQuestion}`
+      : hasSelection
+        ? '请用中文总结我选中的内容，并结合页面上下文补充必要背景；最后给出 3 条要点。'
+        : '请用中文总结并提炼当前页面内容；最后给出 5 条要点、2 条结论、1 条行动建议。';
+
+    const prompt = [
+      instruction,
+      '',
+      '【页面信息】',
+      `标题：${title}`,
+      `URL：${url}`,
+      description ? `描述：${description}` : undefined,
+      '',
+      hasSelection ? '【选中文本】' : undefined,
+      hasSelection ? selectedText : undefined,
+      '',
+      '【正文节选】',
+      textContent,
+      links.length > 0 ? '' : undefined,
+      links.length > 0 ? '【链接节选】' : undefined,
+      links.length > 0 ? links.map((link) => `- ${link.text} (${link.href})`).join('\n') : undefined,
+    ]
+      .filter((line): line is string => Boolean(line))
+      .join('\n');
+
+    return { prompt, displayContent };
   };
 
   const newChat = async () => {
@@ -1125,33 +1244,35 @@ GUIDELINES:
     if (!input.trim() || isLoading || !settings) return;
 
     // Handle commands
+    const trimmedInput = input.trim();
+    let pageSummaryRequest: { userQuestion?: string } | null = null;
+
     if (input.trim().startsWith('/')) {
-      const cmd = input.trim().toLowerCase();
-      if (cmd === '/sources') {
+      const spaceIndex = trimmedInput.indexOf(' ');
+      const command = (spaceIndex === -1 ? trimmedInput : trimmedInput.slice(0, spaceIndex)).toLowerCase();
+      const commandArgs = spaceIndex === -1 ? '' : trimmedInput.slice(spaceIndex + 1).trim();
+
+      if (command === '/sources') {
         setView({ type: 'sources' });
         setInput('');
         return;
       }
-      if (cmd === '/articles') {
+      if (command === '/articles') {
         setView({ type: 'articles' });
         setInput('');
         return;
       }
-      if (cmd === '/back') {
+      if (command === '/back') {
         setView({ type: 'chat' });
         setInput('');
         return;
       }
+
+      if (command === '/page' || command === '/summarize') {
+        pageSummaryRequest = { userQuestion: commandArgs || undefined };
+      }
     }
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-    };
-
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
     setIsUserScrolled(false); // Reset scroll state when user sends message
@@ -1159,8 +1280,67 @@ GUIDELINES:
     abortControllerRef.current = new AbortController();
 
     try {
+      let userContent = input;
+      let displayContent: string | undefined;
+
+      if (pageSummaryRequest) {
+        const selectedTextResponse = await executeTool('getSelectedText', {});
+        const selectedText = typeof selectedTextResponse?.text === 'string' ? selectedTextResponse.text : '';
+
+        const pageContextResponse = await executeTool('getPageContext', {});
+        if (pageContextResponse?.success === false) {
+          const errorMessage = pageContextResponse.error || 'Failed to read page content';
+          if (errorMessage.includes('chrome://') || errorMessage.includes('无法访问该页面')) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content:
+                  `${errorMessage}\n\n` +
+                  '提示：这类页面（如 `chrome://extensions` / 新标签页）Chrome 不允许扩展读取内容。\n' +
+                  '请切换到一个普通网页（`https://...`）再输入 `/page`。',
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+          throw new Error(errorMessage);
+        }
+
+        const parsed = PageContextSchema.safeParse(pageContextResponse);
+        if (!parsed.success) {
+          throw new Error('Failed to parse page content (unexpected response shape)');
+        }
+
+        const summaryPrompt = buildPageSummaryPrompt({
+          page: {
+            title: parsed.data.title,
+            url: parsed.data.url,
+            description: parsed.data.metadata?.description,
+            textContent: parsed.data.textContent,
+            links: parsed.data.links ?? [],
+          },
+          selectedText,
+          userQuestion: pageSummaryRequest.userQuestion,
+        });
+
+        userContent = summaryPrompt.prompt;
+        displayContent = summaryPrompt.displayContent;
+      }
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: userContent,
+        displayContent,
+      };
+
+      const newMessages = [...messages, userMessage];
+      setMessages(newMessages);
+
       // BROWSER TOOLS MODE - Use Gemini Computer Use API
-      if (browserToolsEnabled) {
+      if (browserToolsEnabled && !pageSummaryRequest) {
 
         // Safety check: Ensure we have Google API key
         const provider = getProvider();
@@ -1194,6 +1374,22 @@ GUIDELINES:
       console.error('Full error object:', error);
 
       if (error.name !== 'AbortError') {
+        const msg = String(error?.message || '');
+        if (msg.includes('Cannot access a chrome:// URL') || msg.includes('无法访问该页面')) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              role: 'assistant',
+              content:
+                '无法读取 `chrome://` 等浏览器内部页面的内容。\n\n' +
+                '请切换到普通网页（`http/https`）后，再输入 `/page` 或 `/summarize`。',
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+
         // Show detailed error message to user
         const errorDetails = error?.stack || JSON.stringify(error, null, 2);
         setMessages(prev => {
@@ -1209,6 +1405,54 @@ GUIDELINES:
         });
       }
       setIsLoading(false);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (isLoading) return;
+      setCommandMenuOpen(true);
+      setCommandMenuIndex(0);
+      return;
+    }
+
+    if (!shouldShowCommandMenu || filteredCommands.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setCommandMenuIndex((prev) => (prev + 1) % filteredCommands.length);
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setCommandMenuIndex((prev) => (prev - 1 + filteredCommands.length) % filteredCommands.length);
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      applySelectedCommand();
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      const trimmed = input.trimStart();
+      const token = trimmed.startsWith('/') ? (trimmed.split(/\s+/)[0] || '') : '';
+      const isExactCommand = slashCommands.some((c) => c.command === token);
+      const hasArgs = trimmed.includes(' ');
+      const shouldAutocomplete = !hasArgs && (token === '/' || (token && !isExactCommand));
+      if (shouldAutocomplete) {
+        e.preventDefault();
+        applySelectedCommand();
+      }
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setCommandMenuOpen(false);
     }
   };
 
@@ -1297,48 +1541,20 @@ GUIDELINES:
   return (
     <div className="chat-container dark-mode">
       <div className="chat-header">
-        <div style={{ flex: 1 }}>
-          <h1>Atlas</h1>
-          <p>
-            {(() => {
-              const provider = getProvider();
-              return provider.charAt(0).toUpperCase() + provider.slice(1);
-            })()} · {browserToolsEnabled ? 'gemini-2.5-computer-use-preview-10-2025' : (settings?.llm?.model || settings?.model || 'No model')}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button
-            onClick={() => setView({ type: 'sources' })}
-            className="settings-icon-btn"
-            title="Sources"
-          >
-            📡
-          </button>
-          <button
-            onClick={toggleBrowserTools}
-            className={`settings-icon-btn ${browserToolsEnabled ? 'active' : ''}`}
-            title={browserToolsEnabled ? 'Disable Browser Tools' : 'Enable Browser Tools'}
-            disabled={isLoading}
-          >
-            {browserToolsEnabled ? '◉' : '○'}
-          </button>
-          <button
-            onClick={newChat}
-            className="settings-icon-btn"
-            title="New Chat"
-            disabled={isLoading}
-          >
-            +
-          </button>
-          <button
-            onClick={openSettings}
-            className="settings-icon-btn"
-            title="Settings"
-          >
-            ⋯
-          </button>
-        </div>
-      </div>
+  <h1>Atlas</h1>
+  <div className="header-actions">
+    <button
+      onClick={openSettings}
+      className="icon-btn"
+      title="Settings"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      </svg>
+    </button>
+  </div>
+</div>
 
       {showBrowserToolsWarning && (
         <div style={{
@@ -1372,7 +1588,7 @@ GUIDELINES:
                   message.role === 'assistant' ? (
                     <MessageParser content={message.content} />
                   ) : (
-                    message.content
+                    message.displayContent ?? message.content
                   )
                 ) : (
                   isLoading && message.role === 'assistant' && (
@@ -1390,14 +1606,57 @@ GUIDELINES:
       </div>
 
       <form className="input-form" onSubmit={handleSubmit}>
+        {shouldShowCommandMenu && filteredCommands.length > 0 && (
+          <div className="command-menu" role="listbox" aria-label={t('commands.menuLabel')}>
+            <div className="command-menu-header">
+              <span>{t('commands.menuTitle')}</span>
+              <span className="command-menu-hint">{t('commands.menuHint')}</span>
+            </div>
+            {filteredCommands.map((cmd, idx) => (
+              <button
+                key={cmd.command}
+                type="button"
+                className={`command-item ${idx === commandMenuIndex ? 'active' : ''}`}
+                onMouseEnter={() => setCommandMenuIndex(idx)}
+                onClick={() => {
+                  setCommandMenuIndex(idx);
+                  applySelectedCommand();
+                }}
+              >
+                <div className="command-item-main">
+                  <div className="command-item-command">{cmd.command}</div>
+                  <div className="command-item-title">{cmd.title}</div>
+                </div>
+                <div className="command-item-desc">{cmd.description}</div>
+              </button>
+            ))}
+          </div>
+        )}
         <input
           type="text"
           value={input}
+          ref={inputRef}
+          onKeyDown={handleInputKeyDown}
           onChange={(e) => setInput(e.target.value)}
           placeholder={t('chat.placeholder')}
           disabled={isLoading}
           className="chat-input"
         />
+        <button
+          type="button"
+          className="command-button"
+          onClick={() => {
+            if (isLoading) return;
+            setCommandMenuOpen((prev) => !prev);
+            setCommandMenuIndex(0);
+            setTimeout(() => inputRef.current?.focus(), 0);
+          }}
+          disabled={isLoading}
+          title={t('commands.open')}
+          aria-label={t('commands.open')}
+        >
+          /
+        </button>
         {isLoading ? (
           <button
             type="button"
