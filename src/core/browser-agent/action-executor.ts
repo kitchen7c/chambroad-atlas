@@ -124,7 +124,11 @@ async function executeNavigate(params: Record<string, unknown>): Promise<ActionR
   if (!url) return { success: false, message: 'URL is required' };
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: 'NAVIGATE', url }, (response) => {
-      resolve(response as ActionResult);
+      if (chrome.runtime.lastError) {
+        resolve({ success: false, message: chrome.runtime.lastError.message || 'Unknown error' });
+      } else {
+        resolve(response as ActionResult);
+      }
     });
   });
 }
@@ -162,6 +166,10 @@ async function executePressKey(params: Record<string, unknown>): Promise<ActionR
 async function executeGoBack(): Promise<ActionResult> {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) {
+        resolve({ success: false, message: chrome.runtime.lastError.message || 'Unknown error' });
+        return;
+      }
       if (tabs[0]?.id) {
         chrome.tabs.goBack(tabs[0].id);
         setTimeout(() => resolve({ success: true, message: 'Navigated back' }), 500);
@@ -175,6 +183,10 @@ async function executeGoBack(): Promise<ActionResult> {
 async function executeGoForward(): Promise<ActionResult> {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) {
+        resolve({ success: false, message: chrome.runtime.lastError.message || 'Unknown error' });
+        return;
+      }
       if (tabs[0]?.id) {
         chrome.tabs.goForward(tabs[0].id);
         setTimeout(() => resolve({ success: true, message: 'Navigated forward' }), 500);
@@ -188,6 +200,10 @@ async function executeGoForward(): Promise<ActionResult> {
 async function executeRefresh(): Promise<ActionResult> {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) {
+        resolve({ success: false, message: chrome.runtime.lastError.message || 'Unknown error' });
+        return;
+      }
       if (tabs[0]?.id) {
         chrome.tabs.reload(tabs[0].id);
         setTimeout(() => resolve({ success: true, message: 'Page refreshed' }), 500);
@@ -214,6 +230,10 @@ async function executeSwitchTab(params: Record<string, unknown>): Promise<Action
   return new Promise((resolve) => {
     if (params.index !== undefined) {
       chrome.tabs.query({}, (tabs) => {
+        if (chrome.runtime.lastError) {
+          resolve({ success: false, message: chrome.runtime.lastError.message || 'Unknown error' });
+          return;
+        }
         const tab = tabs[params.index as number];
         if (tab?.id) {
           chrome.tabs.update(tab.id, { active: true });
@@ -224,6 +244,10 @@ async function executeSwitchTab(params: Record<string, unknown>): Promise<Action
       });
     } else if (params.url) {
       chrome.tabs.query({ url: params.url as string }, (tabs) => {
+        if (chrome.runtime.lastError) {
+          resolve({ success: false, message: chrome.runtime.lastError.message || 'Unknown error' });
+          return;
+        }
         if (tabs[0]?.id) {
           chrome.tabs.update(tabs[0].id, { active: true });
           resolve({ success: true, message: `Switched to tab with URL ${params.url}` });
@@ -237,12 +261,19 @@ async function executeSwitchTab(params: Record<string, unknown>): Promise<Action
   });
 }
 
+// SECURITY NOTE: This function uses eval() to execute arbitrary JavaScript code on the page.
+// This is intentional functionality for browser automation but should only be used with
+// trusted input from the AI agent, never with unsanitized user input.
 async function executeJS(params: Record<string, unknown>): Promise<ActionResult> {
   const code = params.code as string;
   if (!code) return { success: false, message: 'code is required' };
 
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+      if (chrome.runtime.lastError) {
+        resolve({ success: false, message: chrome.runtime.lastError.message || 'Unknown error' });
+        return;
+      }
       if (!tabs[0]?.id) {
         resolve({ success: false, message: 'No active tab' });
         return;
@@ -252,6 +283,7 @@ async function executeJS(params: Record<string, unknown>): Promise<ActionResult>
           target: { tabId: tabs[0].id },
           func: (code: string) => {
             try {
+              // eslint-disable-next-line no-eval
               return { success: true, result: eval(code) };
             } catch (e) {
               return { success: false, error: String(e) };
