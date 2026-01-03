@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface ToggleProps {
   label: string;
   checked: boolean;
@@ -7,6 +9,8 @@ interface ToggleProps {
 }
 
 export function Toggle({ label, checked, onChange, disabled, hint }: ToggleProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="toggle-container">
       <span className="toggle-label">{label}</span>
@@ -17,7 +21,7 @@ export function Toggle({ label, checked, onChange, disabled, hint }: ToggleProps
           onClick={() => onChange(false)}
           disabled={disabled}
         >
-          Off
+          {t('browserTools.off', 'Off')}
         </button>
         <button
           type="button"
@@ -25,7 +29,7 @@ export function Toggle({ label, checked, onChange, disabled, hint }: ToggleProps
           onClick={() => onChange(true)}
           disabled={disabled}
         >
-          On
+          {t('browserTools.on', 'On')}
         </button>
       </div>
       {hint && <span className="toggle-hint">{hint}</span>}

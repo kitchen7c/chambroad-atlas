@@ -6,12 +6,54 @@
     "newChat": "New Chat",
     "settings": "Settings"
   },
+  "tabs": {
+    "chat": "Chat",
+    "sources": "Sources",
+    "articles": "Articles"
+  },
+  "browserTools": {
+    "label": "Browser Tools",
+    "on": "On",
+    "off": "Off",
+    "hint": "Using Gemini Computer Use",
+    "enable": "Enable Browser Tools"
+  },
+  "welcome": {
+    "title": "Welcome to Atlas",
+    "desc": "Ask anything or enable Browser Tools to automate your browser."
+  },
   "chat": {
-    "placeholder": "Message Atlas...",
+    "placeholder": "Message Atlas... (try /page or /summarize to summarize this page)",
     "send": "Send",
     "stop": "Stop",
     "welcome": "How can I help you today?",
     "welcomeDesc": "I'm Atlas, your AI assistant. I can help you browse the web, analyze content, and perform various tasks."
+  },
+  "commands": {
+    "open": "Commands",
+    "menuLabel": "Quick commands",
+    "menuTitle": "Quick commands",
+    "menuHint": "↑↓ select · Tab complete · Enter run",
+    "page": {
+      "title": "Summarize this page",
+      "desc": "Extract page text (prefers selection) and summarize; optional question supported"
+    },
+    "summarize": {
+      "title": "Summarize this page (alias)",
+      "desc": "Same as /page"
+    },
+    "sources": {
+      "title": "Open sources",
+      "desc": "Go to sources management/list"
+    },
+    "articles": {
+      "title": "Open articles",
+      "desc": "Go to articles list"
+    },
+    "back": {
+      "title": "Back to chat",
+      "desc": "Return from sources/articles to chat"
+    }
   },
   "settings": {
     "title": "Settings",

@@ -6,12 +6,54 @@
     "newChat": "新对话",
     "settings": "设置"
   },
+  "tabs": {
+    "chat": "聊天",
+    "sources": "信息源",
+    "articles": "文章"
+  },
+  "browserTools": {
+    "label": "浏览器工具",
+    "on": "开",
+    "off": "关",
+    "hint": "使用 Gemini 浏览器自动化",
+    "enable": "启用浏览器工具"
+  },
+  "welcome": {
+    "title": "欢迎使用 Atlas",
+    "desc": "随时提问，或启用浏览器工具来自动化你的浏览器操作。"
+  },
   "chat": {
-    "placeholder": "输入消息...",
+    "placeholder": "输入消息...（/page 或 /summarize：总结当前页）",
     "send": "发送",
     "stop": "停止",
     "welcome": "今天我能帮你做什么？",
     "welcomeDesc": "我是 Atlas，你的 AI 助手。我可以帮你浏览网页、分析内容、执行各种任务。"
+  },
+  "commands": {
+    "open": "命令",
+    "menuLabel": "快捷命令",
+    "menuTitle": "快捷命令",
+    "menuHint": "↑↓ 选择 · Tab 补全 · Enter 执行",
+    "page": {
+      "title": "总结当前页面",
+      "desc": "抓取当前页面正文（优先选中文本）并总结，可追加问题"
+    },
+    "summarize": {
+      "title": "总结当前页面（别名）",
+      "desc": "等同 /page"
+    },
+    "sources": {
+      "title": "打开信息源",
+      "desc": "进入信息源管理与列表"
+    },
+    "articles": {
+      "title": "打开文章",
+      "desc": "进入文章列表视图"
+    },
+    "back": {
+      "title": "返回聊天",
+      "desc": "从信息源/文章返回聊天"
+    }
   },
   "settings": {
     "title": "设置",

@@ -64,12 +64,7 @@ const MessageParser = ({ content }: { content: string }) => {
       {sections.map((section, idx) => (
         <div
           key={idx}
-          style={{
-            padding: '10px 12px',
-            backgroundColor: '#2d2d2d',
-            borderLeft: '3px solid #4d4d4d',
-            borderRadius: '4px',
-          }}
+          className="message-section"
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: LinkComponent as any }}>
             {section}
@@ -1569,11 +1564,11 @@ GUIDELINES:
       <div className="messages-container" ref={messagesContainerRef}>
         {messages.length === 0 ? (
           <div className="welcome-message">
-            <h2>Welcome to Atlas</h2>
-            <p>Ask anything or enable Browser Tools to automate your browser.</p>
+            <h2>{t('welcome.title')}</h2>
+            <p>{t('welcome.desc')}</p>
             {!browserToolsEnabled && (
               <button className="welcome-cta" onClick={toggleBrowserTools}>
-                Enable Browser Tools
+                {t('browserTools.enable')}
               </button>
             )}
           </div>
@@ -1608,11 +1603,11 @@ GUIDELINES:
       <div className="input-area">
         <div className="input-controls">
           <Toggle
-            label="Browser Tools"
+            label={t('browserTools.label')}
             checked={browserToolsEnabled}
             onChange={toggleBrowserTools}
             disabled={isLoading}
-            hint={browserToolsEnabled ? 'Using Gemini Computer Use' : undefined}
+            hint={browserToolsEnabled ? t('browserTools.hint') : undefined}
           />
         </div>
 
@@ -1649,7 +1644,7 @@ GUIDELINES:
             ref={inputRef}
             onKeyDown={handleInputKeyDown}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Atlas anything..."
+            placeholder={t('chat.placeholder')}
             disabled={isLoading}
             className="chat-input"
           />
@@ -1673,7 +1668,7 @@ GUIDELINES:
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
             </svg>
-            New Chat
+            {t('app.newChat')}
           </button>
         </div>
       </div>
