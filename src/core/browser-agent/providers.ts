@@ -1,9 +1,16 @@
 // src/core/browser-agent/providers.ts
 
+import type { LLMProvider } from '../../../types';
 import type { ProviderCapabilities, AgentMode } from './types';
 
+// Default capabilities for unknown providers
+const DEFAULT_CAPABILITIES: ProviderCapabilities = {
+  functionCalling: false,
+  vision: false
+};
+
 // Provider capabilities matrix
-export const providerCapabilities: Record<string, ProviderCapabilities> = {
+export const providerCapabilities: Record<LLMProvider, ProviderCapabilities> = {
   google: { functionCalling: true, vision: true },
   openai: { functionCalling: true, vision: true },
   anthropic: { functionCalling: true, vision: true },
@@ -15,23 +22,23 @@ export const providerCapabilities: Record<string, ProviderCapabilities> = {
 };
 
 // Get capabilities for a provider
-export function getProviderCapabilities(provider: string): ProviderCapabilities {
-  return providerCapabilities[provider] ?? { functionCalling: false, vision: false };
+export function getProviderCapabilities(provider: LLMProvider): ProviderCapabilities {
+  return providerCapabilities[provider] ?? DEFAULT_CAPABILITIES;
 }
 
 // Determine agent mode based on provider
-export function selectAgentMode(provider: string): AgentMode {
+export function selectAgentMode(provider: LLMProvider): AgentMode {
   const caps = getProviderCapabilities(provider);
   if (caps.vision) return 'hybrid';
   return 'dom';
 }
 
 // Check if provider supports function calling
-export function supportsFunctionCalling(provider: string): boolean {
+export function supportsFunctionCalling(provider: LLMProvider): boolean {
   return getProviderCapabilities(provider).functionCalling;
 }
 
 // Check if provider supports vision
-export function supportsVision(provider: string): boolean {
+export function supportsVision(provider: LLMProvider): boolean {
   return getProviderCapabilities(provider).vision;
 }
