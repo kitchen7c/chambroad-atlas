@@ -736,60 +736,59 @@ body {
 /* ===== View Header ===== */
 .view-header {
   padding: 12px 16px;
-  background: #1a1a1a;
-  border-bottom: 1px solid #333333;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
 .view-header-back {
   background: none;
   border: none;
-  color: #ffffff;
+  color: var(--text-secondary);
   font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .view-header-back:hover {
-  background: #333333;
-  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .view-header-title {
   flex: 1;
   font-size: 16px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .view-header-action {
-  background: #333333;
-  border: none;
-  color: #ffffff;
-  padding: 6px 12px;
-  border-radius: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 13px;
+  font-weight: 500;
 }
 
 .view-header-action:hover {
-  background: #444444;
+  background: var(--bg-hover);
 }
 
-/* ===== Sources View ===== */
+/* ===== Sources/Articles View ===== */
 .sources-view,
 .articles-view,
 .article-detail {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #1a1a1a;
+  background: var(--bg-primary);
 }
 
 .sources-search,
@@ -801,22 +800,22 @@ body {
 .articles-search input {
   width: 100%;
   padding: 10px 14px;
-  background: #262626;
-  border: 1px solid #333333;
-  border-radius: 8px;
-  color: #ffffff;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
   font-size: 14px;
 }
 
 .sources-search input::placeholder,
 .articles-search input::placeholder {
-  color: #666666;
+  color: var(--text-disabled);
 }
 
 .sources-search input:focus,
 .articles-search input:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--accent);
 }
 
 .sources-list,
@@ -830,7 +829,7 @@ body {
 .articles-empty {
   text-align: center;
   padding: 40px 20px;
-  color: #666666;
+  color: var(--text-secondary);
 }
 
 .sources-empty p:first-child,
@@ -958,7 +957,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -966,17 +965,19 @@ body {
 }
 
 .source-form {
-  background: #262626;
-  border-radius: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 24px;
   width: 90%;
   max-width: 400px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
 .source-form h2 {
   margin: 0 0 20px;
   font-size: 18px;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .form-field {
@@ -987,7 +988,7 @@ body {
   display: block;
   margin-bottom: 6px;
   font-size: 13px;
-  color: #888888;
+  color: var(--text-secondary);
 }
 
 .form-field input[type="text"],
@@ -995,17 +996,17 @@ body {
 .form-field select {
   width: 100%;
   padding: 10px 12px;
-  background: #1a1a1a;
-  border: 1px solid #333333;
-  border-radius: 6px;
-  color: #ffffff;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
   font-size: 14px;
 }
 
 .form-field input:focus,
 .form-field select:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--accent);
 }
 
 .form-field.checkbox label {
@@ -1033,32 +1034,34 @@ body {
 .form-actions button {
   padding: 10px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .form-actions button.primary {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--accent);
+  color: white;
 }
 
 .form-actions button.primary:hover {
-  background: #1d4ed8;
+  background: var(--accent-hover);
 }
 
 .form-actions button.danger {
-  background: #ef4444;
-  color: #ffffff;
+  background: var(--error);
+  color: white;
 }
 
 .form-actions button:not(.primary):not(.danger) {
-  background: #333333;
-  color: #ffffff;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
 }
 
 .form-actions button:not(.primary):not(.danger):hover {
-  background: #444444;
+  background: var(--bg-hover);
 }
 
 /* ===== Articles Filter ===== */
@@ -1070,21 +1073,22 @@ body {
 
 .articles-filter button {
   padding: 6px 14px;
-  background: #262626;
-  border: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  color: #888888;
+  color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
 }
 
 .articles-filter button.active {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
 }
 
 .articles-filter button:hover:not(.active) {
-  background: #333333;
+  background: var(--bg-hover);
 }
 
 /* ===== Article Card ===== */
