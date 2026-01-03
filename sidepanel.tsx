@@ -10,6 +10,7 @@ import { SourcesView } from './src/components/SourcesView';
 import { ArticlesView } from './src/components/ArticlesView';
 import { ArticleDetail } from './src/components/ArticleDetail';
 import { TabBar, TabType } from './src/components/TabBar';
+import { Toggle } from './src/components/Toggle';
 
 type ViewState =
   | { type: 'chat' }
@@ -1620,76 +1621,78 @@ GUIDELINES:
         )}
       </div>
 
-      <form className="input-form" onSubmit={handleSubmit}>
-        {shouldShowCommandMenu && filteredCommands.length > 0 && (
-          <div className="command-menu" role="listbox" aria-label={t('commands.menuLabel')}>
-            <div className="command-menu-header">
-              <span>{t('commands.menuTitle')}</span>
-              <span className="command-menu-hint">{t('commands.menuHint')}</span>
+      <div className="input-area">
+        <div className="input-controls">
+          <Toggle
+            label="Browser Tools"
+            checked={browserToolsEnabled}
+            onChange={toggleBrowserTools}
+            disabled={isLoading}
+            hint={browserToolsEnabled ? 'Using Gemini Computer Use' : undefined}
+          />
+        </div>
+
+        <form className="input-form" onSubmit={handleSubmit}>
+          {shouldShowCommandMenu && filteredCommands.length > 0 && (
+            <div className="command-menu" role="listbox" aria-label={t('commands.menuLabel')}>
+              <div className="command-menu-header">
+                <span>{t('commands.menuTitle')}</span>
+                <span className="command-menu-hint">{t('commands.menuHint')}</span>
+              </div>
+              {filteredCommands.map((cmd, idx) => (
+                <button
+                  key={cmd.command}
+                  type="button"
+                  className={`command-item ${idx === commandMenuIndex ? 'active' : ''}`}
+                  onMouseEnter={() => setCommandMenuIndex(idx)}
+                  onClick={() => {
+                    setCommandMenuIndex(idx);
+                    applySelectedCommand();
+                  }}
+                >
+                  <div className="command-item-main">
+                    <div className="command-item-command">{cmd.command}</div>
+                    <div className="command-item-title">{cmd.title}</div>
+                  </div>
+                  <div className="command-item-desc">{cmd.description}</div>
+                </button>
+              ))}
             </div>
-            {filteredCommands.map((cmd, idx) => (
-              <button
-                key={cmd.command}
-                type="button"
-                className={`command-item ${idx === commandMenuIndex ? 'active' : ''}`}
-                onMouseEnter={() => setCommandMenuIndex(idx)}
-                onClick={() => {
-                  setCommandMenuIndex(idx);
-                  applySelectedCommand();
-                }}
-              >
-                <div className="command-item-main">
-                  <div className="command-item-command">{cmd.command}</div>
-                  <div className="command-item-title">{cmd.title}</div>
-                </div>
-                <div className="command-item-desc">{cmd.description}</div>
-              </button>
-            ))}
-          </div>
-        )}
-        <input
-          type="text"
-          value={input}
-          ref={inputRef}
-          onKeyDown={handleInputKeyDown}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={t('chat.placeholder')}
-          disabled={isLoading}
-          className="chat-input"
-        />
-        <button
-          type="button"
-          className="command-button"
-          onClick={() => {
-            if (isLoading) return;
-            setCommandMenuOpen((prev) => !prev);
-            setCommandMenuIndex(0);
-            setTimeout(() => inputRef.current?.focus(), 0);
-          }}
-          disabled={isLoading}
-          title={t('commands.open')}
-          aria-label={t('commands.open')}
-        >
-          /
-        </button>
-        {isLoading ? (
-          <button
-            type="button"
-            onClick={stop}
-            className="send-button stop-button"
-          >
-            ⬛
+          )}
+          <input
+            type="text"
+            value={input}
+            ref={inputRef}
+            onKeyDown={handleInputKeyDown}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask Atlas anything..."
+            disabled={isLoading}
+            className="chat-input"
+          />
+          {isLoading ? (
+            <button type="button" onClick={stop} className="send-button stop-button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
+              </svg>
+            </button>
+          ) : (
+            <button type="submit" disabled={!input.trim()} className="send-button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+              </svg>
+            </button>
+          )}
+        </form>
+
+        <div className="input-footer">
+          <button onClick={newChat} className="new-chat-btn" disabled={isLoading}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+            New Chat
           </button>
-        ) : (
-          <button
-            type="submit"
-            disabled={!input.trim()}
-            className="send-button"
-          >
-            ⏎
-          </button>
-        )}
-      </form>
+        </div>
+      </div>
       <div ref={messagesEndRef} />
     </div>
   );
