@@ -20,3 +20,6 @@ export * from './llm';
 
 // P2: Jobs
 export * from './jobs';
+
+// Browser Agent
+export * from './browser-agent';
