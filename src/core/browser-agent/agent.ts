@@ -159,7 +159,22 @@ export class BrowserAgent {
         ).join('\n');
 
         // Get updated page state
-        const newSummary = await getPageSummary();
+        let newSummary;
+        try {
+          newSummary = await getPageSummary();
+        } catch {
+          newSummary = { url: '未知', title: '未知', elements: { buttons: 0, inputs: 0, links: 0, selects: 0, images: 0, forms: 0 }, visibleText: '', viewport: { width: 0, height: 0 }, scrollPosition: { x: 0, y: 0 } };
+        }
+
+        // Build element info for continuation
+        const elements = newSummary.elements || {};
+        const elementsInfo = Object.entries(elements)
+          .filter(([_, count]) => (count as number) > 0)
+          .map(([type, count]) => `${count} 个${type === 'buttons' ? '按钮' : type === 'inputs' ? '输入框' : type === 'links' ? '链接' : type === 'selects' ? '下拉框' : type}`)
+          .join(', ') || '无';
+
+        // Update pageSummary for safety checks in next iteration
+        pageSummary = newSummary;
 
         this.messages.push({
           role: 'assistant',
@@ -168,7 +183,7 @@ export class BrowserAgent {
 
         this.messages.push({
           role: 'user',
-          content: `## 操作结果\n${resultSummary}\n\n## 当前页面状态\nURL: ${newSummary.url}\n标题: ${newSummary.title}\n\n请继续完成任务，或者如果任务已完成，总结结果。`
+          content: `## 操作结果\n${resultSummary}\n\n## 当前页面状态\nURL: ${newSummary.url || '未知'}\n标题: ${newSummary.title || '未知'}\n可交互元素: ${elementsInfo}\n\n页面内容摘要:\n${(newSummary.visibleText || '').slice(0, 300)}\n\n请继续完成任务，或者如果任务已完成，总结结果。`
         });
 
       } catch (error) {

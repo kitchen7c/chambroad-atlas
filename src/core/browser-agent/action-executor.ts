@@ -123,10 +123,12 @@ async function executeNavigate(params: Record<string, unknown>): Promise<ActionR
   const url = params.url as string;
   if (!url) return { success: false, message: 'URL is required' };
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type: 'NAVIGATE', url }, (response) => {
+    chrome.runtime.sendMessage({ type: 'NAVIGATE', url }, async (response) => {
       if (chrome.runtime.lastError) {
         resolve({ success: false, message: chrome.runtime.lastError.message || 'Unknown error' });
       } else {
+        // Wait for page to load after navigation
+        await new Promise(r => setTimeout(r, 2000));
         resolve(response as ActionResult);
       }
     });
