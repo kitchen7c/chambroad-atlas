@@ -9,6 +9,7 @@ import { GeminiResponseSchema, PageContextSchema } from './types';
 import { SourcesView } from './src/components/SourcesView';
 import { ArticlesView } from './src/components/ArticlesView';
 import { ArticleDetail } from './src/components/ArticleDetail';
+import { TabBar, TabType } from './src/components/TabBar';
 
 type ViewState =
   | { type: 'chat' }
@@ -92,10 +93,22 @@ function ChatSidebar() {
   const [showBrowserToolsWarning, setShowBrowserToolsWarning] = useState(false);
   const [isUserScrolled, setIsUserScrolled] = useState(false);
   const [view, setView] = useState<ViewState>({ type: 'chat' });
+  const [activeTab, setActiveTab] = useState<TabType>('chat');
   const abortControllerRef = useRef<AbortController | null>(null);
   const listenerAttachedRef = useRef(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
   const [commandMenuIndex, setCommandMenuIndex] = useState(0);
+
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    if (tab === 'chat') {
+      setView({ type: 'chat' });
+    } else if (tab === 'sources') {
+      setView({ type: 'sources' });
+    } else if (tab === 'articles') {
+      setView({ type: 'articles' });
+    }
+  };
 
   const executeTool = async (toolName: string, parameters: any, retryCount = 0): Promise<any> => {
     const MAX_RETRIES = 3;
@@ -1555,6 +1568,8 @@ GUIDELINES:
     </button>
   </div>
 </div>
+
+      <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
 
       {showBrowserToolsWarning && (
         <div style={{
