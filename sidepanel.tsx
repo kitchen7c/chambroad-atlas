@@ -91,7 +91,6 @@ function ChatSidebar() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [browserToolsEnabled, setBrowserToolsEnabled] = useState(false);
-  const [showBrowserToolsWarning, setShowBrowserToolsWarning] = useState(false);
   const [isUserScrolled, setIsUserScrolled] = useState(false);
   const [view, setView] = useState<ViewState>({ type: 'chat' });
   const [activeTab, setActiveTab] = useState<TabType>('chat');
@@ -375,10 +374,6 @@ function ChatSidebar() {
     }
 
     setBrowserToolsEnabled(newValue);
-
-    if (newValue) {
-      setShowBrowserToolsWarning(false);
-    }
   };
 
   const stop = () => {
@@ -446,7 +441,6 @@ function ChatSidebar() {
     // Clear messages
     setMessages([]);
     setInput('');
-    setShowBrowserToolsWarning(false);
   };
 
   const streamWithGeminiComputerUse = async (messages: Message[]) => {
@@ -1507,7 +1501,7 @@ GUIDELINES:
           <p style={{ marginBottom: '20px' }}>{t('settings.subtitle')}</p>
           <button
             onClick={openSettings}
-            className="settings-icon-btn"
+            className="icon-btn"
             style={{ width: 'auto', padding: '12px 24px' }}
           >
             {t('app.settings')}
@@ -1571,21 +1565,6 @@ GUIDELINES:
 </div>
 
       <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
-
-      {showBrowserToolsWarning && (
-        <div style={{
-          padding: '12px 16px',
-          background: '#fef3c7',
-          borderBottom: '1px solid #fbbf24',
-          fontSize: '13px',
-          color: '#92400e',
-        }}>
-          <strong>Browser Tools Enabled!</strong> Now using Gemini 2.5 Computer Use Preview (overrides your selected model).
-          {!settings?.llm?.apiKey && !settings?.apiKey && (
-            <span> Please <a href="#" onClick={(e) => { e.preventDefault(); openSettings(); }} style={{ color: '#2563eb', textDecoration: 'underline' }}>set your Google API key</a> in settings.</span>
-          )}
-        </div>
-      )}
 
       <div className="messages-container" ref={messagesContainerRef}>
         {messages.length === 0 ? (
