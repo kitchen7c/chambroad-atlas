@@ -841,17 +841,19 @@ body {
 
 /* ===== Source Card ===== */
 .source-card {
-  background: #262626;
-  border-radius: 8px;
-  padding: 14px;
-  margin-bottom: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s ease;
   position: relative;
 }
 
 .source-card:hover {
-  background: #333333;
+  border-color: var(--text-disabled);
+  background: var(--bg-surface);
 }
 
 .source-card.disabled {
@@ -861,8 +863,8 @@ body {
 .source-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
 .source-card-icon {
@@ -872,29 +874,59 @@ body {
 .source-card-name {
   flex: 1;
   font-weight: 500;
-  color: #ffffff;
+  font-size: 14px;
+  color: var(--text-primary);
 }
 
 .source-card-menu-btn {
   background: none;
   border: none;
-  color: #888888;
+  color: var(--text-disabled);
   cursor: pointer;
   padding: 4px 8px;
-  font-size: 16px;
+  font-size: 14px;
+  border-radius: 4px;
 }
 
 .source-card-menu-btn:hover {
-  color: #ffffff;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.source-card-info {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.source-card-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-disabled);
+  margin-top: 4px;
+}
+
+.source-card-unread {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.source-card-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--error);
 }
 
 .source-card-menu {
   position: absolute;
-  top: 40px;
-  right: 14px;
-  background: #333333;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  top: 44px;
+  right: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 100;
   overflow: hidden;
 }
@@ -905,43 +937,18 @@ body {
   padding: 10px 16px;
   background: none;
   border: none;
-  color: #ffffff;
+  color: var(--text-primary);
   text-align: left;
   cursor: pointer;
   font-size: 13px;
 }
 
 .source-card-menu button:hover {
-  background: #444444;
+  background: var(--bg-hover);
 }
 
 .source-card-menu button.danger {
-  color: #ef4444;
-}
-
-.source-card-info {
-  display: flex;
-  gap: 6px;
-  font-size: 12px;
-  color: #888888;
-  margin-bottom: 4px;
-}
-
-.source-card-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #666666;
-}
-
-.source-card-unread {
-  color: #2563eb;
-}
-
-.source-card-error {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #ef4444;
+  color: var(--error);
 }
 
 /* ===== Source Form ===== */
