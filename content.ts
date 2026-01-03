@@ -637,6 +637,135 @@ function executePageAction(
   }
 }
 
+// ===== Browser Agent Element Extraction =====
+
+// Element store for index-based operations
+let elementStore: Element[] = [];
+
+interface InteractiveElement {
+  index: number;
+  tag: string;
+  text: string;
+  role?: string;
+  type?: string;
+  placeholder?: string;
+  href?: string;
+  value?: string;
+  isVisible: boolean;
+  isEnabled: boolean;
+  rect: { x: number; y: number; width: number; height: number };
+}
+
+function extractInteractiveElements(
+  filterType?: 'button' | 'input' | 'link' | 'select' | 'image' | 'all',
+  visibleOnly?: boolean
+): InteractiveElement[] {
+  const selectors: Record<string, string> = {
+    button: 'button, [role="button"], input[type="button"], input[type="submit"]',
+    input: 'input:not([type="hidden"]):not([type="button"]):not([type="submit"]), textarea, [contenteditable="true"]',
+    link: 'a[href]',
+    select: 'select',
+    image: 'img[src]',
+    all: 'button, [role="button"], input, textarea, select, a[href], [contenteditable="true"], [onclick], [role="link"], [role="tab"], [role="menuitem"]'
+  };
+
+  const selector = selectors[filterType || 'all'];
+  const elements = Array.from(document.querySelectorAll(selector));
+
+  elementStore = []; // Reset store
+  const result: InteractiveElement[] = [];
+
+  for (const el of elements) {
+    const rect = el.getBoundingClientRect();
+    const style = window.getComputedStyle(el);
+
+    const isVisible =
+      rect.width > 0 &&
+      rect.height > 0 &&
+      style.display !== 'none' &&
+      style.visibility !== 'hidden' &&
+      style.opacity !== '0';
+
+    const isInViewport =
+      rect.top < window.innerHeight &&
+      rect.bottom > 0 &&
+      rect.left < window.innerWidth &&
+      rect.right > 0;
+
+    if (visibleOnly && (!isVisible || !isInViewport)) {
+      continue;
+    }
+
+    const index = elementStore.length;
+    elementStore.push(el);
+
+    const htmlEl = el as HTMLElement;
+    const inputEl = el as HTMLInputElement;
+
+    result.push({
+      index,
+      tag: el.tagName.toLowerCase(),
+      text: (htmlEl.innerText || htmlEl.textContent || '').trim().slice(0, 50),
+      role: el.getAttribute('role') || undefined,
+      type: inputEl.type || undefined,
+      placeholder: inputEl.placeholder || undefined,
+      href: (el as HTMLAnchorElement).href || undefined,
+      value: inputEl.value || undefined,
+      isVisible: isVisible && isInViewport,
+      isEnabled: !inputEl.disabled,
+      rect: {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      }
+    });
+  }
+
+  return result;
+}
+
+function extractPageSummary(): {
+  url: string;
+  title: string;
+  viewport: { width: number; height: number };
+  scrollPosition: { x: number; y: number };
+  elements: { buttons: number; inputs: number; links: number; selects: number; images: number; forms: number };
+  visibleText: string;
+  focusedElement?: { tag: string; index: number };
+} {
+  const buttons = document.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]').length;
+  const inputs = document.querySelectorAll('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), textarea').length;
+  const links = document.querySelectorAll('a[href]').length;
+  const selects = document.querySelectorAll('select').length;
+  const images = document.querySelectorAll('img').length;
+  const forms = document.querySelectorAll('form').length;
+
+  let focusedElement: { tag: string; index: number } | undefined;
+  const activeEl = document.activeElement;
+  if (activeEl && activeEl !== document.body) {
+    const idx = elementStore.indexOf(activeEl);
+    focusedElement = {
+      tag: activeEl.tagName.toLowerCase(),
+      index: idx >= 0 ? idx : -1
+    };
+  }
+
+  return {
+    url: window.location.href,
+    title: document.title,
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+    scrollPosition: { x: window.scrollX, y: window.scrollY },
+    elements: { buttons, inputs, links, selects, images, forms },
+    visibleText: document.body.innerText.slice(0, 500),
+    focusedElement
+  };
+}
+
+function getElementByIndex(index: number): Element | null {
+  return elementStore[index] || null;
+}
+
 // Listen for messages from background script or sidebar
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === 'PING') {
@@ -678,6 +807,100 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === 'GET_SELECTED_TEXT') {
     const selectedText = window.getSelection()?.toString() || '';
     sendResponse({ text: selectedText });
+    return true;
+  }
+
+  if (request.type === 'GET_PAGE_SUMMARY') {
+    // First extract elements to populate the store
+    extractInteractiveElements('all', false);
+    const summary = extractPageSummary();
+    sendResponse(summary);
+    return true;
+  }
+
+  if (request.type === 'GET_ELEMENTS') {
+    const elements = extractInteractiveElements(request.filterType, request.visibleOnly);
+    sendResponse({ elements });
+    return true;
+  }
+
+  if (request.type === 'GET_ELEMENT_DETAILS') {
+    const indices: number[] = request.indices || [];
+    const details = indices.map(idx => {
+      const el = getElementByIndex(idx);
+      if (!el) return null;
+
+      const rect = el.getBoundingClientRect();
+      const htmlEl = el as HTMLElement;
+      const inputEl = el as HTMLInputElement;
+
+      // Build selector and xpath
+      let selector = '';
+      let xpath = '';
+      try {
+        if (el.id) {
+          selector = `#${el.id}`;
+        } else if (el.className && typeof el.className === 'string') {
+          selector = `${el.tagName.toLowerCase()}.${el.className.split(' ')[0]}`;
+        } else {
+          selector = el.tagName.toLowerCase();
+        }
+        xpath = `//${el.tagName.toLowerCase()}`;
+      } catch (e) {
+        // Ignore errors in selector building
+      }
+
+      const attrs: Record<string, string> = {};
+      for (const attr of Array.from(el.attributes)) {
+        attrs[attr.name] = attr.value;
+      }
+
+      return {
+        index: idx,
+        tag: el.tagName.toLowerCase(),
+        text: (htmlEl.innerText || htmlEl.textContent || '').trim().slice(0, 100),
+        role: el.getAttribute('role') || undefined,
+        type: inputEl.type || undefined,
+        placeholder: inputEl.placeholder || undefined,
+        href: (el as HTMLAnchorElement).href || undefined,
+        value: inputEl.value || undefined,
+        isVisible: rect.width > 0 && rect.height > 0,
+        isEnabled: !inputEl.disabled,
+        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        attributes: attrs,
+        selector,
+        xpath,
+        parentText: el.parentElement?.textContent?.trim().slice(0, 50),
+        childCount: el.children.length
+      };
+    }).filter(Boolean);
+
+    sendResponse({ details });
+    return true;
+  }
+
+  if (request.type === 'CLICK_BY_INDEX') {
+    const el = getElementByIndex(request.index);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+
+      ['mousedown', 'mouseup', 'click'].forEach(eventType => {
+        el.dispatchEvent(new MouseEvent(eventType, {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          clientX: x,
+          clientY: y
+        }));
+      });
+
+      highlightElement(el, { x, y });
+      sendResponse({ success: true, message: `Clicked element ${request.index}` });
+    } else {
+      sendResponse({ success: false, message: `Element ${request.index} not found` });
+    }
     return true;
   }
 });
