@@ -15,7 +15,7 @@
     "label": "Browser Tools",
     "on": "On",
     "off": "Off",
-    "hint": "Using Gemini Computer Use",
+    "hint": "AI controls your browser",
     "enable": "Enable Browser Tools"
   },
   "welcome": {

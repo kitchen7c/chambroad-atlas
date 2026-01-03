@@ -15,7 +15,7 @@
     "label": "浏览器工具",
     "on": "开",
     "off": "关",
-    "hint": "使用 Gemini 浏览器自动化",
+    "hint": "AI 控制浏览器",
     "enable": "启用浏览器工具"
   },
   "welcome": {
