@@ -28,13 +28,52 @@ async function openAtlasUiFallback() {
   await chrome.tabs.create({ url: chrome.runtime.getURL('sidepanel.html') });
 }
 
-// UI opening is handled by `popup.html` (Manifest action popup) to support Arc and other Chromium browsers.
+async function configureActionUi() {
+  // In Chrome with Side Panel support, prefer opening the side panel on action click.
+  // In browsers without Side Panel (e.g. Arc), keep a popup so the user still has a clickable entrypoint.
+  type SidePanelApi = {
+    setPanelBehavior: (options: { openPanelOnActionClick: boolean }) => Promise<void> | void;
+    open: (options: { tabId: number }) => Promise<void> | void;
+  };
+
+  const sidePanel = (chrome as unknown as { sidePanel?: Partial<SidePanelApi> }).sidePanel;
+  const hasSidePanel =
+    typeof sidePanel?.setPanelBehavior === 'function' && typeof sidePanel?.open === 'function';
+
+  try {
+    if (hasSidePanel) {
+      await sidePanel!.setPanelBehavior!({ openPanelOnActionClick: true });
+      await chrome.action.setPopup({ popup: '' });
+    } else {
+      await chrome.action.setPopup({ popup: 'popup.html' });
+    }
+  } catch (error) {
+    console.error('[Atlas] Failed to configure action UI:', error);
+    try {
+      await chrome.action.setPopup({ popup: 'popup.html' });
+    } catch {
+      // ignore
+    }
+  }
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  void configureActionUi();
+});
+
+chrome.runtime.onStartup?.addListener(() => {
+  void configureActionUi();
+});
 
 // Listen for extension icon clicks
 chrome.action.onClicked.addListener((tab) => {
   (async () => {
     try {
-      if (!chrome.sidePanel?.open) {
+      // Best-effort: make sure Chrome is configured correctly even if the service worker started late.
+      await configureActionUi();
+
+      const sidePanel = (chrome as unknown as { sidePanel?: { open?: unknown } }).sidePanel;
+      if (typeof sidePanel?.open !== 'function') {
         await openAtlasUiFallback();
         return;
       }
@@ -45,7 +84,7 @@ chrome.action.onClicked.addListener((tab) => {
         return;
       }
 
-      await chrome.sidePanel.open({ tabId });
+      await (sidePanel.open as (options: { tabId: number }) => Promise<void> | void)({ tabId });
     } catch (error) {
       console.error('[Atlas] Failed to open UI:', error);
       try {
@@ -152,10 +191,49 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     (async () => {
       try {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tabs[0]?.id) {
-          await ensureContentScript(tabs[0].id);
-          const response = await chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_PAGE_CONTEXT' });
+        const tab = tabs[0];
+        if (tab?.id) {
+          if (isRestrictedTabUrl(tab.url)) {
+            sendResponse({
+              success: false,
+              error: '无法访问该页面（chrome:// 等浏览器内部页面无法被扩展读取）。请打开普通网页（http/https）后再试。',
+              url: tab.url,
+            });
+            return;
+          }
+
+          await ensureContentScript(tab.id);
+          const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_PAGE_CONTEXT' });
           sendResponse(response); // Return response directly, not wrapped
+        } else {
+          sendResponse({ success: false, error: 'No active tab found' });
+        }
+      } catch (error) {
+        sendResponse({ success: false, error: (error as Error).message });
+      }
+    })();
+    return true;
+  }
+
+  if (request.type === 'GET_SELECTED_TEXT') {
+    (async () => {
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tab = tabs[0];
+        if (tab?.id) {
+          if (isRestrictedTabUrl(tab.url)) {
+            sendResponse({
+              success: false,
+              error: '无法访问该页面（chrome:// 等浏览器内部页面无法被扩展读取）。请打开普通网页（http/https）后再试。',
+              url: tab.url,
+              text: '',
+            });
+            return;
+          }
+
+          await ensureContentScript(tab.id);
+          const response = await chrome.tabs.sendMessage(tab.id, { type: 'GET_SELECTED_TEXT' });
+          sendResponse(response);
         } else {
           sendResponse({ success: false, error: 'No active tab found' });
         }
@@ -171,9 +249,19 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     (async () => {
       try {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tabs[0]?.id) {
-          await ensureContentScript(tabs[0].id);
-          const response = await chrome.tabs.sendMessage(tabs[0].id, {
+        const tab = tabs[0];
+        if (tab?.id) {
+          if (isRestrictedTabUrl(tab.url)) {
+            sendResponse({
+              success: false,
+              error: '无法在该页面执行操作（chrome:// 等浏览器内部页面不允许扩展注入脚本）。请打开普通网页（http/https）后再试。',
+              url: tab.url,
+            });
+            return;
+          }
+
+          await ensureContentScript(tab.id);
+          const response = await chrome.tabs.sendMessage(tab.id, {
             type: 'EXECUTE_ACTION',
             action: request.action,
             target: request.target,
@@ -192,6 +280,62 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         }
       } catch (error) {
         sendResponse({ success: false, error: (error as Error).message });
+      }
+    })();
+    return true;
+  }
+
+  // Forward page summary request to content script
+  if (request.type === 'GET_PAGE_SUMMARY') {
+    (async () => {
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tab = tabs[0];
+        if (tab?.id) {
+          if (isRestrictedTabUrl(tab.url)) {
+            sendResponse({
+              success: false,
+              error: '无法访问该页面',
+              url: tab.url,
+            });
+            return;
+          }
+          await ensureContentScript(tab.id);
+          const response = await chrome.tabs.sendMessage(tab.id, request);
+          sendResponse(response);
+        } else {
+          sendResponse({ error: 'No active tab' });
+        }
+      } catch (error) {
+        sendResponse({ error: (error as Error).message });
+      }
+    })();
+    return true;
+  }
+
+  // Forward element requests to content script
+  if (request.type === 'GET_ELEMENTS' || request.type === 'GET_ELEMENT_DETAILS' || request.type === 'CLICK_BY_INDEX') {
+    (async () => {
+      try {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tab = tabs[0];
+        if (tab?.id) {
+          if (isRestrictedTabUrl(tab.url)) {
+            sendResponse({
+              success: false,
+              error: '无法访问该页面',
+              url: tab.url,
+            });
+            return;
+          }
+          await ensureContentScript(tab.id);
+          const response = await chrome.tabs.sendMessage(tab.id, request);
+          sendResponse(response);
+        } else {
+          sendResponse({ error: 'No active tab' });
+        }
+      } catch (error) {
+        sendResponse({ error: (error as Error).message });
       }
     })();
     return true;
