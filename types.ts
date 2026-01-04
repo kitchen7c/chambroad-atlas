@@ -79,6 +79,22 @@ export interface Settings {
   provider?: 'google';  // Only 'google' supported for legacy compatibility
   apiKey?: string;
   model?: string;
+
+  // Knowledge base settings
+  knowledge?: {
+    enabled: boolean;
+    tool: 'obsidian' | 'logseq' | 'typora' | 'custom';
+    vaultPath: string;
+    inboxFolder: string;
+    dailyFolder: string;
+    archiveFolder: string;
+    linkFormat: 'wikilink' | 'markdown';
+    tagFormat: 'frontmatter' | 'inline' | 'both';
+    vectorSearch: {
+      enabled: boolean;
+      provider: 'openai' | 'local';
+    };
+  };
 }
 
 export interface ChatState {
@@ -94,6 +110,11 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  /**
+   * Optional UI-only content (so we can send long context to the model
+   * without flooding the chat UI).
+   */
+  displayContent?: string;
   toolCalls?: GeminiFunctionCall[];
 }
 
