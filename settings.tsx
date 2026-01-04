@@ -6,6 +6,7 @@ import type { Settings, LLMConfig } from './types';
 import { LLM_PROVIDER_PRESETS } from './types';
 import { LLMSettings } from './src/components/LLMSettings';
 import { LanguageSwitch } from './src/components/LanguageSwitch';
+import { KnowledgeSettings, DEFAULT_KNOWLEDGE_SETTINGS, type KnowledgeSettingsData } from './src/components/KnowledgeSettings';
 
 function SettingsPage() {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ function SettingsPage() {
       apiKey: '',
       model: LLM_PROVIDER_PRESETS.google.defaultModel,
     },
+    knowledge: DEFAULT_KNOWLEDGE_SETTINGS,
   });
   const [saved, setSaved] = useState(false);
 
@@ -32,11 +34,13 @@ function SettingsPage() {
               apiKey: oldSettings.apiKey,
               model: oldSettings.model || LLM_PROVIDER_PRESETS.google.defaultModel,
             },
+            knowledge: oldSettings.knowledge || DEFAULT_KNOWLEDGE_SETTINGS,
           });
         } else if (oldSettings.llm) {
-          // Clean migration - only keep llm config
+          // Clean migration - keep llm and knowledge config
           setSettings({
             llm: oldSettings.llm,
+            knowledge: oldSettings.knowledge || DEFAULT_KNOWLEDGE_SETTINGS,
           });
         }
       }
@@ -45,6 +49,10 @@ function SettingsPage() {
 
   const handleLLMChange = (llmConfig: LLMConfig) => {
     setSettings({ ...settings, llm: llmConfig });
+  };
+
+  const handleKnowledgeChange = (knowledge: KnowledgeSettingsData) => {
+    setSettings({ ...settings, knowledge });
   };
 
   const handleTestConnection = async (): Promise<{ success: boolean; error?: string }> => {
@@ -114,6 +122,11 @@ function SettingsPage() {
           config={settings.llm}
           onChange={handleLLMChange}
           onTestConnection={handleTestConnection}
+        />
+
+        <KnowledgeSettings
+          settings={settings.knowledge || DEFAULT_KNOWLEDGE_SETTINGS}
+          onChange={handleKnowledgeChange}
         />
 
         <LanguageSwitch />

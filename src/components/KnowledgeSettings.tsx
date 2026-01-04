@@ -1,56 +1,54 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-interface KnowledgeSettingsProps {
-  settings: {
+export interface KnowledgeSettingsData {
+  enabled: boolean;
+  tool: 'obsidian' | 'logseq' | 'typora' | 'custom';
+  vaultPath: string;
+  inboxFolder: string;
+  dailyFolder: string;
+  archiveFolder: string;
+  linkFormat: 'wikilink' | 'markdown';
+  tagFormat: 'frontmatter' | 'inline' | 'both';
+  vectorSearch: {
     enabled: boolean;
-    tool: string;
-    vaultPath: string;
-    inboxFolder: string;
-    linkFormat: string;
-    tagFormat: string;
-    vectorSearch: {
-      enabled: boolean;
-      provider: string;
-    };
+    provider: 'openai' | 'local';
   };
-  onSave: (settings: KnowledgeSettingsProps['settings']) => void;
 }
 
-export function KnowledgeSettings({ settings, onSave }: KnowledgeSettingsProps) {
+interface KnowledgeSettingsProps {
+  settings: KnowledgeSettingsData;
+  onChange: (settings: KnowledgeSettingsData) => void;
+}
+
+export function KnowledgeSettings({ settings, onChange }: KnowledgeSettingsProps) {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState(settings);
 
   const handleChange = (field: string, value: unknown) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
+    onChange({ ...settings, [field]: value });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="knowledge-settings">
-      <h3>{t('settings.knowledgeBase', 'Knowledge Base')}</h3>
+    <div className="settings-section knowledge-settings">
+      <h3 className="section-title">{t('settings.knowledge.title')}</h3>
 
-      <div className="form-field">
-        <label className="checkbox">
+      <div className="form-group">
+        <label className="checkbox-label">
           <input
             type="checkbox"
-            checked={formData.enabled}
+            checked={settings.enabled}
             onChange={(e) => handleChange('enabled', e.target.checked)}
           />
-          {t('settings.enableKnowledgeBase', 'Enable Knowledge Base')}
+          <span>{t('settings.knowledge.enable')}</span>
         </label>
+        <p className="field-hint">{t('settings.knowledge.enableDesc')}</p>
       </div>
 
-      {formData.enabled && (
+      {settings.enabled && (
         <>
-          <div className="form-field">
-            <label>{t('settings.noteTool', 'Note Tool')}</label>
+          <div className="form-group">
+            <label>{t('settings.knowledge.tool')}</label>
             <select
-              value={formData.tool}
+              value={settings.tool}
               onChange={(e) => handleChange('tool', e.target.value)}
             >
               <option value="obsidian">Obsidian</option>
@@ -58,58 +56,85 @@ export function KnowledgeSettings({ settings, onSave }: KnowledgeSettingsProps) 
               <option value="typora">Typora</option>
               <option value="custom">Custom</option>
             </select>
+            <p className="field-hint">{t('settings.knowledge.toolDesc')}</p>
           </div>
 
-          <div className="form-field">
-            <label>{t('settings.vaultPath', 'Vault Path')}</label>
+          <div className="form-group">
+            <label>{t('settings.knowledge.vaultPath')}</label>
             <input
               type="text"
-              value={formData.vaultPath}
+              value={settings.vaultPath}
               onChange={(e) => handleChange('vaultPath', e.target.value)}
-              placeholder="~/Documents/Obsidian/MyVault"
+              placeholder={t('settings.knowledge.vaultPathPlaceholder')}
             />
+            <p className="field-hint">{t('settings.knowledge.vaultPathDesc')}</p>
           </div>
 
-          <div className="form-field">
-            <label>{t('settings.inboxFolder', 'Inbox Folder')}</label>
+          <div className="form-group">
+            <label>{t('settings.knowledge.inboxFolder')}</label>
             <input
               type="text"
-              value={formData.inboxFolder}
+              value={settings.inboxFolder}
               onChange={(e) => handleChange('inboxFolder', e.target.value)}
-              placeholder="Atlas/Inbox"
+              placeholder={t('settings.knowledge.inboxFolderPlaceholder')}
             />
+            <p className="field-hint">{t('settings.knowledge.inboxFolderDesc')}</p>
           </div>
 
-          <div className="form-field">
-            <label>{t('settings.linkFormat', 'Link Format')}</label>
+          <div className="form-group">
+            <label>{t('settings.knowledge.linkFormat')}</label>
             <select
-              value={formData.linkFormat}
+              value={settings.linkFormat}
               onChange={(e) => handleChange('linkFormat', e.target.value)}
             >
-              <option value="wikilink">[[Wikilink]]</option>
-              <option value="markdown">[Markdown](link)</option>
+              <option value="wikilink">{t('settings.knowledge.wikilink')}</option>
+              <option value="markdown">{t('settings.knowledge.markdown')}</option>
             </select>
           </div>
 
-          <div className="form-field">
-            <label className="checkbox">
+          <div className="form-group">
+            <label>{t('settings.knowledge.tagFormat')}</label>
+            <select
+              value={settings.tagFormat}
+              onChange={(e) => handleChange('tagFormat', e.target.value)}
+            >
+              <option value="frontmatter">{t('settings.knowledge.frontmatter')}</option>
+              <option value="inline">{t('settings.knowledge.inline')}</option>
+              <option value="both">{t('settings.knowledge.both')}</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
               <input
                 type="checkbox"
-                checked={formData.vectorSearch.enabled}
+                checked={settings.vectorSearch.enabled}
                 onChange={(e) => handleChange('vectorSearch', {
-                  ...formData.vectorSearch,
+                  ...settings.vectorSearch,
                   enabled: e.target.checked,
                 })}
               />
-              {t('settings.enableVectorSearch', 'Enable Semantic Search')}
+              <span>{t('settings.knowledge.vectorSearch')}</span>
             </label>
+            <p className="field-hint">{t('settings.knowledge.vectorSearchDesc')}</p>
           </div>
         </>
       )}
-
-      <button type="submit" className="primary">
-        {t('settings.save', 'Save')}
-      </button>
-    </form>
+    </div>
   );
 }
+
+export const DEFAULT_KNOWLEDGE_SETTINGS: KnowledgeSettingsData = {
+  enabled: false,
+  tool: 'obsidian',
+  vaultPath: '',
+  inboxFolder: 'Atlas/Inbox',
+  dailyFolder: 'Atlas/Daily',
+  archiveFolder: 'Atlas/Archive',
+  linkFormat: 'wikilink',
+  tagFormat: 'frontmatter',
+  vectorSearch: {
+    enabled: false,
+    provider: 'openai',
+  },
+};
