@@ -23,3 +23,6 @@ export * from './jobs';
 
 // Browser Agent
 export * from './browser-agent';
+
+// P3: Knowledge Base
+export * from './knowledge';
