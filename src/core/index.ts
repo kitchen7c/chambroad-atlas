@@ -26,3 +26,6 @@ export * from './browser-agent';
 
 // P3: Knowledge Base
 export * from './knowledge';
+
+// P4: Export
+export * from './export';

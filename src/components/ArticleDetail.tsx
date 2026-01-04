@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { db, type StoredArticle, type StoredSource } from '../core/storage/db';
 import { ProcessorJob } from '../core/jobs/processor-job';
 import type { LLMConfig, Settings } from '../../types';
+import type { ExportFormat } from '../core/export/types';
 
 interface ArticleDetailProps {
   articleId: string;
@@ -18,6 +19,7 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
   const [llmConfig, setLlmConfig] = useState<LLMConfig | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     const loadArticle = async () => {
@@ -94,6 +96,62 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
     return new Date(timestamp).toLocaleString();
   };
 
+  const handleExport = async (format: ExportFormat) => {
+    if (!article) return;
+
+    const tags = parseTags();
+    const exportData = {
+      id: article.id,
+      title: article.title,
+      content: article.content,
+      source: source?.name,
+      url: article.url,
+      author: article.author,
+      publishedAt: article.publishedAt ? new Date(article.publishedAt).toISOString() : undefined,
+      tags,
+      score: article.score,
+      summary: article.summary,
+      isRead: article.isRead,
+      isFavorite: article.isFavorite,
+    };
+
+    // Dynamic import to avoid bundling issues
+    const { ExportService } = await import('../core/export');
+    const service = new ExportService();
+    const content = service.preview(exportData, format);
+
+    const mimeTypes: Record<ExportFormat, string> = {
+      markdown: 'text/markdown',
+      pdf: 'application/pdf',
+      html: 'text/html',
+      json: 'application/json',
+      csv: 'text/csv',
+    };
+
+    const extensions: Record<ExportFormat, string> = {
+      markdown: 'md',
+      pdf: 'pdf',
+      html: 'html',
+      json: 'json',
+      csv: 'csv',
+    };
+
+    // Handle both string and Buffer content
+    const blobContent: BlobPart = typeof content === 'string'
+      ? content
+      : new Uint8Array(content);
+
+    const blob = new Blob([blobContent], { type: mimeTypes[format] });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${article.title.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '-')}.${extensions[format]}`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    setShowExportMenu(false);
+  };
+
   const parseTags = (): string[] => {
     if (!article?.tags) return [];
     try {
@@ -151,6 +209,23 @@ export function ArticleDetail({ articleId, onBack }: ArticleDetailProps) {
           >
             ↗
           </button>
+          <div className="export-dropdown">
+            <button
+              className="action-btn"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              title={t('articles.export') || 'Export'}
+            >
+              ↓
+            </button>
+            {showExportMenu && (
+              <div className="export-menu">
+                <button onClick={() => handleExport('markdown')}>Markdown</button>
+                <button onClick={() => handleExport('pdf')}>PDF</button>
+                <button onClick={() => handleExport('html')}>HTML</button>
+                <button onClick={() => handleExport('json')}>JSON</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="article-detail-content">
